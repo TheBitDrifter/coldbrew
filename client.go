@@ -3,7 +3,6 @@ package coldbrew
 import (
 	"errors"
 	"io/fs"
-	"log"
 
 	"github.com/TheBitDrifter/blueprint"
 	blueprintclient "github.com/TheBitDrifter/blueprint/client"
@@ -111,8 +110,6 @@ func (cli *client) Update() error {
 		for _, s := range cli.activeScenes {
 			err := cli.load(s, swapCacheSpr, swapCacheSnd)
 			if err != nil {
-				log.Println("scene cannot fit  assets given current cache config, maxSpritesCached", ClientConfig.maxSpritesCached)
-				log.Println("scene cannot fit  assets given current cache config, maxSpritesCached", ClientConfig.maxSoundsCached)
 				return err
 			}
 		}
