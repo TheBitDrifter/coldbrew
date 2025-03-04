@@ -43,7 +43,17 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		}
 		cam.Surface().Clear()
 
-		scene := cli.CameraSceneTracker()[cam].Scene
+		entry, ok := cli.CameraSceneTracker()[cam]
+		var scene coldbrew.Scene
+		if ok {
+			scene = entry.Scene
+		} else {
+			active := cli.ActiveScenes()
+			if len(active) == 0 {
+				continue
+			}
+			scene = active[0]
+		}
 		if !scene.Ready() || !cam.Ready(cli) {
 			scene = cli.LoadingScenes()[0]
 		}
