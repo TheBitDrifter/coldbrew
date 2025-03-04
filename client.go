@@ -49,7 +49,7 @@ type client struct {
 }
 
 // NewClient creates a new client with specified resolution and cache settings
-func NewClient(baseResX, baseResY, maxScenesCached int, embeddedFS fs.FS) Client {
+func NewClient(baseResX, baseResY, maxSpritesCached, maxSoundsCached, maxScenesCached int, embeddedFS fs.FS) Client {
 	cli := &client{
 		tickManager:   newTickManager(),
 		cameraUtility: newCameraUtility(),
@@ -63,6 +63,8 @@ func NewClient(baseResX, baseResY, maxScenesCached int, embeddedFS fs.FS) Client
 	ClientConfig.baseResolution.y = baseResY
 	ClientConfig.windowSize.x = baseResX
 	ClientConfig.windowSize.y = baseResY
+	ClientConfig.maxSoundsCached = maxSoundsCached
+	ClientConfig.maxSpritesCached = maxSoundsCached
 	ebiten.SetWindowSize(baseResX, baseResY)
 	return cli
 }
