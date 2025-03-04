@@ -36,6 +36,7 @@ func newConfigManager() *configManager {
 
 // SetTitle updates the game window title
 func (cm *configManager) SetTitle(title string) {
+	ebiten.SetWindowTitle(title)
 	ClientConfig.Title = title
 }
 
