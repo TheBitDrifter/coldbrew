@@ -33,7 +33,7 @@ type RenderItem struct {
 }
 
 // Render processes all renderable entities within a scene and presents them to screen
-func (sys *GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
+func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 	if sys.logger == nil {
 		sys.logger = bark.For("GlobalRenderSystem")
 	}
