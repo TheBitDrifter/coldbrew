@@ -222,6 +222,11 @@ func (cli client) ActivateCamera() (Camera, error) {
 	for _, cam := range cli.cameras {
 		if !cam.Active() {
 			cam.Activate()
+			// Defaults:
+			cam.SetDimensions(ClientConfig.resolution.x, ClientConfig.resolution.y)
+			screenPos, _ := cam.Positions()
+			screenPos.X = 0
+			screenPos.Y = 0
 
 			return cam, nil
 		}
