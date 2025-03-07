@@ -30,7 +30,7 @@ func main() {
 		assets,
 	)
 
-	client.SetTitle("Rendering a Sprite")
+	client.SetTitle("Simple Collision and Physics")
 
 	err := client.RegisterScene(
 		"Example Scene",
