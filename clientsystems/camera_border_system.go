@@ -13,7 +13,6 @@ func (sys CameraBorderLockSystem) Run(cli coldbrew.LocalClient, scene coldbrew.S
 	for _, cam := range cameras {
 		sceneWidth := scene.Width()
 		sceneHeight := scene.Height()
-		cam.Surface().Clear()
 		camWidth, camHeight := cam.Dimensions()
 
 		// Calculate maximum X position to keep camera within scene bounds

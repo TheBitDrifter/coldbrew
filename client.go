@@ -2,6 +2,7 @@ package coldbrew
 
 import (
 	"errors"
+	"image/color"
 	"io/fs"
 
 	"github.com/TheBitDrifter/blueprint"
@@ -59,12 +60,14 @@ func NewClient(baseResX, baseResY, maxSpritesCached, maxSoundsCached, maxScenesC
 		assetManager:  newAssetManager(embeddedFS),
 	}
 	cli.inputManager = newInputManager(cli)
-	ClientConfig.baseResolution.x = baseResX
-	ClientConfig.baseResolution.y = baseResY
-	ClientConfig.windowSize.x = baseResX
-	ClientConfig.windowSize.y = baseResY
 	ClientConfig.maxSoundsCached = maxSoundsCached
 	ClientConfig.maxSpritesCached = maxSoundsCached
+	ClientConfig.baseResolution.x = baseResX
+	ClientConfig.baseResolution.y = baseResY
+	ClientConfig.resolution.x = baseResX
+	ClientConfig.resolution.y = baseResY
+	ClientConfig.windowSize.x = baseResX
+	ClientConfig.windowSize.y = baseResY
 	ebiten.SetWindowSize(baseResX, baseResY)
 	return cli
 }
@@ -199,6 +202,9 @@ func (cli *client) Draw(image *ebiten.Image) {
 			}
 		}
 		for _, renderSys := range renderers {
+			if !activeScene.Ready() {
+				continue
+			}
 			renderSys.Render(activeScene, screen, cli)
 		}
 	}
@@ -273,6 +279,8 @@ func (sys defaultLoaderTextSystem) Render(scene Scene, screen Screen, cameraUtil
 		if cameraUtil.Ready(cam) {
 			continue
 		}
+
+		cam.Surface().Fill(color.RGBA{R: 20, G: 0, B: 10, A: 1})
 		textFace := text.NewGoXFace(basicfont.Face7x13)
 		textBoundsX, textBoundsY := text.Measure(loadingText, textFace, 0)
 		width, height := cam.Dimensions()
@@ -282,6 +290,6 @@ func (sys defaultLoaderTextSystem) Render(scene Scene, screen Screen, cameraUtil
 			X: centerX,
 			Y: centerY + textBoundsY,
 		})
-		cam.PresentToScreen(screen)
+		cam.PresentToScreen(screen, 0)
 	}
 }

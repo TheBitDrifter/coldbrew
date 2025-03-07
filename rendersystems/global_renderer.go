@@ -2,6 +2,7 @@ package rendersystems
 
 import (
 	"image"
+	"image/color"
 	"log/slog"
 	"math"
 
@@ -37,29 +38,41 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 	if sys.logger == nil {
 		sys.logger = bark.For("GlobalRenderSystem")
 	}
+
 	for _, cam := range cli.Cameras() {
+
+		cam.Surface().Clear()
 		if !cam.Active() {
 			continue
 		}
-		cam.Surface().Clear()
 
 		entry, ok := cli.CameraSceneTracker()[cam]
 		var scene coldbrew.Scene
 		if ok {
 			scene = entry.Scene
 		} else {
+			sys.logger.Debug("Camera not assigned, attempting active scene 0", "cameraIndex", cam.Index())
 			active := cli.ActiveScenes()
 			if len(active) == 0 {
+				sys.logger.Debug("Camera not assigned, all scenes inactive, aborting render", "cameraIndex", cam.Index())
 				continue
 			}
 			scene = active[0]
+			sys.logger.Debug("Camera not assigned, assigning to active scene", "cameraIndex", cam.Index(), "active scene", scene.Name())
+			cli.CameraSceneTracker()[cam] = coldbrew.CameraSceneRecord{
+				Scene: scene,
+				Tick:  cli.CurrentTick(),
+			}
 		}
+
 		if !scene.Ready() || !cam.Ready(cli) {
 			scene = cli.LoadingScenes()[0]
 		}
 		// Render backgrounds
+		noBg := true
 		cursor := scene.NewCursor(blueprint.Queries.ParallaxBackground)
 		for cursor.Next() {
+			noBg = false
 			if ok, bgConfig := blueprintclient.Components.ParallaxBackground.GetFromCursorSafe(cursor); ok {
 				position := blueprintspatial.Components.Position.GetFromCursor(cursor)
 				sprBundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
@@ -69,11 +82,16 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 				}
 			}
 		}
+
+		if noBg {
+			cam.Surface().Fill(color.RGBA{R: 10, G: 40, B: 100, A: 1})
+		}
 		cursor = scene.NewCursor(blueprint.Queries.SpriteBundle)
 		for cursor.Next() {
 			if blueprintclient.Components.ParallaxBackground.CheckCursor(cursor) {
 				continue
 			}
+
 			sprBundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
 			sprites := coldbrew.MaterializeSprites(*sprBundle)
 			for i, sprite := range sprites {
@@ -91,7 +109,7 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 				}
 				hasScale, scale := blueprintspatial.Components.Scale.GetFromCursorSafe(cursor)
 				if !hasScale {
-					scaleV := blueprintspatial.NewScale(0, 0)
+					scaleV := blueprintspatial.NewScale(1, 1)
 					scale = &scaleV
 				}
 
@@ -122,7 +140,7 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		}
 		sys.sorted = make([][]RenderItem, len(sys.sorted))
 
-		cam.PresentToScreen(screen)
+		cam.PresentToScreen(screen, coldbrew.ClientConfig.CameraBorderSize())
 	}
 }
 

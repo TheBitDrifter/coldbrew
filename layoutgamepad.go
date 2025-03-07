@@ -10,7 +10,7 @@ import (
 type PadLayout interface {
 	RegisterPad(padID int)
 	RegisterGamepadButton(ebiten.GamepadButton, blueprintinput.Input)
-	RegisterGamepadAxes(bool, blueprintinput.Input)
+	RegisterGamepadAxes(left bool, input blueprintinput.Input)
 }
 
 type padLayout struct {

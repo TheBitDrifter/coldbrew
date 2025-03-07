@@ -20,6 +20,7 @@ var ClientConfig = config{
 	enforceMinOnActive: true,
 	tps:                60,
 	debugKey:           ebiten.Key0,
+	cameraBorderSize:   0,
 	resolution: struct{ x, y int }{
 		x: 640,
 		y: 360,
@@ -39,6 +40,7 @@ type config struct {
 	enforceMinOnActive bool
 	tps                int
 	debugKey           ebiten.Key
+	cameraBorderSize   int
 	resolution         struct {
 		x, y int
 	}
@@ -70,3 +72,6 @@ func (c config) TPS() int { return c.tps }
 
 // DebugKey returns the key bound to trigger debug functionality
 func (c config) DebugKey() ebiten.Key { return c.debugKey }
+
+// DebugKey returns the key bound to trigger debug functionality
+func (c config) CameraBorderSize() int { return c.cameraBorderSize }

@@ -15,6 +15,7 @@ type ConfigManager interface {
 	SetEnforceMinOnActive(bool)
 	SetTPS(int)
 	BindDebugKey(ebiten.Key)
+	SetCameraBorderSize(int)
 }
 
 // configWrite contains configuration parameters that can be written to
@@ -89,4 +90,9 @@ func (cm *configManager) SetTPS(ticks int) {
 // BindDebugKey sets the key used to trigger debug functionality
 func (cm *configManager) BindDebugKey(key ebiten.Key) {
 	ClientConfig.debugKey = key
+}
+
+// BindDebugKey sets the key used to trigger debug functionality
+func (cm *configManager) SetCameraBorderSize(thickness int) {
+	ClientConfig.cameraBorderSize = thickness
 }

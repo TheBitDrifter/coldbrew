@@ -66,7 +66,7 @@ func (sys *DebugRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		_, localPos := cam.Positions()
 		sys.renderShapes(cam.Surface(), shapes, *localPos)
 		sys.renderCollisions(cam.Surface(), shapes, *localPos)
-		cam.PresentToScreen(screen)
+		cam.PresentToScreen(screen, coldbrew.ClientConfig.CameraBorderSize())
 	}
 	displayClientPerformanceStats(screen)
 }

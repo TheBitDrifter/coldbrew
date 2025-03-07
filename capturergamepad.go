@@ -178,35 +178,41 @@ func (h *gamepadCapturer) processStickInputs(receiverIndex int, receiver *receiv
 	if !ok {
 		return
 	}
+
+	// Process left stick if enabled
 	if (stickState.Left.X != 0 || stickState.Left.Y != 0) && h.client.receivers[receiverIndex].leftAxes {
 		h.client.receivers[receiverIndex].inputs.pad = append(
 			h.client.receivers[receiverIndex].inputs.pad,
 			blueprintinput.StampedInput{
 				Tick: tick,
-				X:    int(stickState.Left.X * float64(x)),
-				Y:    int(stickState.Left.Y * float64(y)),
-				Val:  h.client.receivers[receiverIndex].leftAxesInput,
+				// Use stick X/Y values directly as the vector components
+				X:   int(stickState.Left.X * 100),  // Scale to a reasonable range if needed
+				Y:   int(-stickState.Left.Y * 100), // Invert Y and scale to a reasonable range
+				Val: h.client.receivers[receiverIndex].leftAxesInput,
 			},
 		)
 		h.logger.Debug("gamepad left stick processed",
-			"x", x,
-			"y", y,
+			"x", stickState.Left.X,
+			"y", -stickState.Left.Y, // Showing inverted Y value in logs
 			"val", h.client.receivers[receiverIndex].leftAxesInput,
 		)
 	}
+
+	// Process right stick if enabled
 	if (stickState.Right.X != 0 || stickState.Right.Y != 0) && h.client.receivers[receiverIndex].rightAxes {
 		h.client.receivers[receiverIndex].inputs.pad = append(
 			h.client.receivers[receiverIndex].inputs.pad,
 			blueprintinput.StampedInput{
 				Tick: tick,
-				X:    int(stickState.Right.X * float64(x)),
-				Y:    int(stickState.Right.Y * float64(y)),
-				Val:  h.client.receivers[receiverIndex].rightAxesInput,
+				// Use stick X/Y values directly as the vector components
+				X:   int(stickState.Right.X * 100),  // Scale to a reasonable range if needed
+				Y:   int(-stickState.Right.Y * 100), // Invert Y and scale to a reasonable range
+				Val: h.client.receivers[receiverIndex].rightAxesInput,
 			},
 		)
 		h.logger.Debug("gamepad right stick processed",
-			"x", x,
-			"y", y,
+			"x", stickState.Right.X,
+			"y", -stickState.Right.Y, // Showing inverted Y value in logs
 			"val", h.client.receivers[receiverIndex].rightAxesInput,
 		)
 	}

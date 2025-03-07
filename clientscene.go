@@ -32,7 +32,7 @@ type SceneManager interface {
 	// ChangeScene transitions to a target scene, transferring specified entities
 	ChangeScene(target Scene, entities ...warehouse.Entity) error
 	// ActivateScene activates a target scene while keeping the origin scene active
-	ActivateScene(origin, target Scene, entities ...warehouse.Entity) error
+	ActivateScene(target Scene, entities ...warehouse.Entity) error
 	// DeactivateScene removes a scene from the active scenes list
 	DeactivateScene(target Scene)
 }
@@ -68,10 +68,10 @@ func (m *sceneManager) LoadingScenes() []Scene { return m.loadingScenes }
 func (m *sceneManager) Cache() warehouse.Cache[Scene] { return m.cache }
 
 // ActivateScene adds a target scene to active scenes and transfers specified entities from origin
-func (m *sceneManager) ActivateScene(origin, target Scene, entities ...warehouse.Entity) error {
-	originStorage := origin.Storage()
+func (m *sceneManager) ActivateScene(target Scene, entities ...warehouse.Entity) error {
 	targetStorage := target.Storage()
 	for _, en := range entities {
+		originStorage := en.Storage()
 		if err := originStorage.TransferEntities(targetStorage, en); err != nil {
 			return bark.AddTrace(err)
 		}

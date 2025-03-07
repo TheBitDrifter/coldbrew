@@ -1,6 +1,8 @@
 package coldbrew
 
 import (
+	"image/color"
+
 	"github.com/TheBitDrifter/blueprint/vector"
 	"github.com/hajimehoshi/ebiten/v2"
 	text "github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -36,7 +38,7 @@ type Camera interface {
 	// DrawTextStatic renders text at an absolute position (on the camera)
 	DrawTextStatic(text string, opts *text.DrawOptions, fontFace *text.GoTextFace, pos vector.Two)
 	// PresentToScreen renders the camera's contents to the provided screen
-	PresentToScreen(screen Screen)
+	PresentToScreen(screen Screen, borderSize int)
 	// SetDimensions updates the camera's width and height
 	SetDimensions(width, height int)
 	// Dimensions returns the camera's current width and height
@@ -55,6 +57,8 @@ type camera struct {
 	height, width                 int
 	screenPosition, worldPosition vector.Two
 	index                         int
+	borderImg                     *ebiten.Image
+	lastBorderSize                int
 }
 
 func (c *camera) Ready(cli Client) bool {
@@ -127,7 +131,24 @@ func (c *camera) DrawTextBasicStatic(content string, opts *text.DrawOptions, fon
 }
 
 // PresentToScreen draws the camera's surface to the target screen at the camera's position
-func (c *camera) PresentToScreen(screen Screen) {
+func (c *camera) PresentToScreen(screen Screen, borderSize int) {
+	// Check if we need to create or recreate the border image
+	if c.borderImg == nil || c.lastBorderSize != borderSize {
+		// Create a new border image
+		bounds := c.surface.Image().Bounds()
+		totalWidth := bounds.Dx() + (borderSize * 2)
+		totalHeight := bounds.Dy() + (borderSize * 2)
+		c.borderImg = ebiten.NewImage(totalWidth, totalHeight)
+		c.borderImg.Fill(color.RGBA{0, 0, 0, 255}) // Pure black
+		c.lastBorderSize = borderSize
+	}
+
+	// Draw the border behind the camera surface
+	borderOpts := &ebiten.DrawImageOptions{}
+	borderOpts.GeoM.Translate(c.screenPosition.X-float64(borderSize), c.screenPosition.Y-float64(borderSize))
+	screen.Image().DrawImage(c.borderImg, borderOpts)
+
+	// Draw the camera surface on top, at its original position
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(c.screenPosition.X, c.screenPosition.Y)
 	screen.Image().DrawImage(c.surface.Image(), opts)
