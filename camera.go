@@ -10,6 +10,9 @@ import (
 
 var _ Camera = &camera{}
 
+// Single pixel image used for drawing borders
+var singlePixelImage *ebiten.Image
+
 // Camera manages viewport rendering and coordinate transformation between
 // screen space and scene space
 type Camera interface {
@@ -57,8 +60,6 @@ type camera struct {
 	height, width                 int
 	screenPosition, worldPosition vector.Two
 	index                         int
-	borderImg                     *ebiten.Image
-	lastBorderSize                int
 }
 
 func (c *camera) Ready(cli Client) bool {
@@ -132,29 +133,43 @@ func (c *camera) DrawTextBasicStatic(content string, opts *text.DrawOptions, fon
 
 // PresentToScreen draws the camera's surface to the target screen at the camera's position
 func (c *camera) PresentToScreen(screen Screen, borderSize int) {
-	// Check if we need to create or recreate the border image
-	if c.borderImg == nil || c.lastBorderSize != borderSize {
-		// Create a new border image
-		bounds := c.surface.Image().Bounds()
-		totalWidth := bounds.Dx() + (borderSize * 2)
-		totalHeight := bounds.Dy() + (borderSize * 2)
-		c.borderImg = ebiten.NewImage(totalWidth, totalHeight)
-		c.borderImg.Fill(color.RGBA{0, 0, 0, 255}) // Pure black
-		c.lastBorderSize = borderSize
-	}
-
-	// Draw the border behind the camera surface
-	borderOpts := &ebiten.DrawImageOptions{}
-	borderOpts.GeoM.Translate(c.screenPosition.X-float64(borderSize), c.screenPosition.Y-float64(borderSize))
-	screen.Image().DrawImage(c.borderImg, borderOpts)
-
-	// Draw the camera surface on top, at its original position
+	// Draw the camera surface
 	opts := &ebiten.DrawImageOptions{}
 	opts.GeoM.Translate(c.screenPosition.X, c.screenPosition.Y)
 	screen.Image().DrawImage(c.surface.Image(), opts)
-}
 
-// SetDimensions updates the camera dimensions and recreates the surface with the new size
+	// If we need a border, draw it using a single pixel image scaled to the right size
+	if borderSize > 0 {
+		// Use a single 1x1 pixel image for the border
+		if singlePixelImage == nil {
+			singlePixelImage = ebiten.NewImage(1, 1)
+			singlePixelImage.Fill(color.RGBA{0, 0, 0, 255}) // Black border
+		}
+
+		// Get dimensions
+		w, h := float64(c.width), float64(c.height)
+		x, y := c.screenPosition.X, c.screenPosition.Y
+		bs := float64(borderSize)
+
+		// Define border rectangles (position and scale)
+		borderRects := []struct {
+			x, y, scaleX, scaleY float64
+		}{
+			{x - bs, y - bs, w + (bs * 2), bs}, // Top
+			{x - bs, y + h, w + (bs * 2), bs},  // Bottom
+			{x - bs, y, bs, h},                 // Left
+			{x + w, y, bs, h},                  // Right
+		}
+
+		// Draw all four sides using the same 1x1 image
+		for _, rect := range borderRects {
+			borderOpts := &ebiten.DrawImageOptions{}
+			borderOpts.GeoM.Scale(rect.scaleX, rect.scaleY)
+			borderOpts.GeoM.Translate(rect.x, rect.y)
+			screen.Image().DrawImage(singlePixelImage, borderOpts)
+		}
+	}
+} // SetDimensions updates the camera dimensions and recreates the surface with the new size
 func (c *camera) SetDimensions(width, height int) {
 	c.width = width
 	c.height = height

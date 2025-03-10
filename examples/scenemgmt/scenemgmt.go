@@ -132,7 +132,7 @@ func (basicTransferSystem) Run(cli coldbrew.Client) error {
 		}
 		cursor := activeScene.NewCursor(blueprint.Queries.CameraIndex)
 		for cursor.Next() {
-			if inpututil.IsKeyJustPressed(ebiten.Key0) {
+			if inpututil.IsKeyJustPressed(ebiten.Key1) {
 
 				currentPlayerEntity, err := cursor.CurrentEntity()
 				if err != nil {

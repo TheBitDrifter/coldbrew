@@ -2,6 +2,7 @@ package coldbrew
 
 import (
 	"errors"
+	"fmt"
 	"image/color"
 	"io/fs"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/TheBitDrifter/table"
 	"github.com/TheBitDrifter/warehouse"
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	text "github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/image/font/basicfont"
@@ -179,6 +181,10 @@ func (cli *client) Layout(int, int) (int, int) {
 }
 
 func (cli *client) Draw(image *ebiten.Image) {
+	for i := range cli.cameras {
+		c := cli.cameras[i]
+		c.Surface().Clear()
+	}
 	screen := Screen{
 		sprite{name: "screen", image: image},
 	}
@@ -207,6 +213,10 @@ func (cli *client) Draw(image *ebiten.Image) {
 			}
 			renderSys.Render(activeScene, screen, cli)
 		}
+	}
+	if ClientConfig.DebugVisual {
+		stats := fmt.Sprintf("FRAMES: %v\nTICKS: %v", ebiten.ActualFPS(), ebiten.ActualTPS())
+		ebitenutil.DebugPrint(screen.Image(), stats)
 	}
 }
 
@@ -284,7 +294,6 @@ func (sys defaultLoaderTextSystem) Render(scene Scene, screen Screen, cameraUtil
 		if cameraUtil.Ready(cam) {
 			continue
 		}
-
 		cam.Surface().Fill(color.RGBA{R: 20, G: 0, B: 10, A: 1})
 		textFace := text.NewGoXFace(basicfont.Face7x13)
 		textBoundsX, textBoundsY := text.Measure(loadingText, textFace, 0)
@@ -295,6 +304,6 @@ func (sys defaultLoaderTextSystem) Render(scene Scene, screen Screen, cameraUtil
 			X: centerX,
 			Y: centerY + textBoundsY,
 		})
-		cam.PresentToScreen(screen, 0)
+		cam.PresentToScreen(screen, ClientConfig.cameraBorderSize)
 	}
 }

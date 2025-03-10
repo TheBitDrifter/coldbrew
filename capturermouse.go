@@ -47,7 +47,7 @@ func (handler *mouseCapturer) populateReceiver(receiverPtr *receiver) error {
 				X:    x,
 				Y:    y,
 			})
-			handler.logger.Info("mouse buttons pressed",
+			handler.logger.Debug("mouse buttons pressed",
 				"buttons", pressedButtons,
 				"x", x,
 				"y", y,

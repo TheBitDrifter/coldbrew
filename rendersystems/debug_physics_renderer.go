@@ -1,7 +1,6 @@
 package rendersystems
 
 import (
-	"fmt"
 	"image/color"
 	"math"
 
@@ -67,8 +66,8 @@ func (sys *DebugRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		sys.renderShapes(cam.Surface(), shapes, *localPos)
 		sys.renderCollisions(cam.Surface(), shapes, *localPos)
 		cam.PresentToScreen(screen, coldbrew.ClientConfig.CameraBorderSize())
+
 	}
-	displayClientPerformanceStats(screen)
 }
 
 // renderShapes draws all shape outlines with appropriate colors
@@ -200,10 +199,4 @@ func drawShapeWithColor(screen *ebiten.Image, shape ShapeInfo, camPos vector.Two
 		ebitenutil.DrawLine(screen, x+halfWidth, y+halfHeight, x-halfWidth, y+halfHeight, color)
 		ebitenutil.DrawLine(screen, x-halfWidth, y+halfHeight, x-halfWidth, y-halfHeight, color)
 	}
-}
-
-// displayClientPerformanceStats shows FPS and TPS in the debug overlay
-func displayClientPerformanceStats(screen coldbrew.Screen) {
-	stats := fmt.Sprintf("FRAMES: %v\nTICKS: %v", ebiten.ActualFPS(), ebiten.ActualTPS())
-	ebitenutil.DebugPrint(screen.Image(), stats)
 }

@@ -2,7 +2,6 @@ package rendersystems
 
 import (
 	"image"
-	"image/color"
 	"log/slog"
 	"math"
 
@@ -40,8 +39,6 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 	}
 
 	for _, cam := range cli.Cameras() {
-
-		cam.Surface().Clear()
 		if !cam.Active() {
 			continue
 		}
@@ -69,23 +66,18 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 			scene = cli.LoadingScenes()[0]
 		}
 		// Render backgrounds
-		noBg := true
 		cursor := scene.NewCursor(blueprint.Queries.ParallaxBackground)
 		for cursor.Next() {
-			noBg = false
 			if ok, bgConfig := blueprintclient.Components.ParallaxBackground.GetFromCursorSafe(cursor); ok {
 				position := blueprintspatial.Components.Position.GetFromCursor(cursor)
 				sprBundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
-				backgroundSprite := coldbrew.MaterializeSprites(*sprBundle)[0]
+				backgroundSprite := coldbrew.MaterializeSprites(sprBundle)[0]
 				if sprBundle.Blueprints[0].Config.Active {
 					RenderBackground(backgroundSprite, position.Two, bgConfig, cam, scene.Width())
 				}
 			}
 		}
 
-		if noBg {
-			cam.Surface().Fill(color.RGBA{R: 10, G: 40, B: 100, A: 1})
-		}
 		cursor = scene.NewCursor(blueprint.Queries.SpriteBundle)
 		for cursor.Next() {
 			if blueprintclient.Components.ParallaxBackground.CheckCursor(cursor) {
@@ -93,7 +85,7 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 			}
 
 			sprBundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
-			sprites := coldbrew.MaterializeSprites(*sprBundle)
+			sprites := coldbrew.MaterializeSprites(sprBundle)
 			for i, sprite := range sprites {
 				bp := &sprBundle.Blueprints[i]
 				pos := blueprintspatial.Components.Position.GetFromCursor(cursor)
@@ -207,7 +199,7 @@ func RenderEntity(
 // RenderEntityFromCursor renders an entity directly from a warehouse cursor
 func RenderEntityFromCursor(cursor *warehouse.Cursor, cam coldbrew.Camera, currentTick int) {
 	sprBundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
-	sprites := coldbrew.MaterializeSprites(*sprBundle)
+	sprites := coldbrew.MaterializeSprites(sprBundle)
 	for i, sprite := range sprites {
 		bp := &sprBundle.Blueprints[i]
 		pos := blueprintspatial.Components.Position.GetFromCursor(cursor)

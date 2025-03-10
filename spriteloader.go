@@ -45,12 +45,12 @@ func (loader *spriteLoader) Load(spriteBundle *blueprintclient.SpriteBundle, cac
 			continue
 		}
 
+		loader.mu.Lock()
 		spr, err := loader.loadSpriteFromPath(spriteBlueprint.Location.Key)
 		if err != nil {
 			return err
 		}
 
-		loader.mu.Lock()
 		index, err := cache.Register(spriteBlueprint.Location.Key, spr)
 		if err != nil {
 			return err
@@ -65,7 +65,7 @@ func (loader *spriteLoader) Load(spriteBundle *blueprintclient.SpriteBundle, cac
 // In development mode, it loads from the local filesystem
 // In production mode, it loads from embedded assets
 func (loader *spriteLoader) loadSpriteFromPath(path string) (Sprite, error) {
-	if !isProd {
+	if !isProd && !isWASM() {
 		// Development mode: load from filesystem
 		updatedPath := fmt.Sprintf("assets/images/%s", path)
 		img, _, err := ebitenutil.NewImageFromFile(updatedPath)
