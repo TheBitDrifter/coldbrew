@@ -8,7 +8,7 @@ require (
 	github.com/TheBitDrifter/mask v0.0.0-20250302170854-74953aa585aa
 	github.com/TheBitDrifter/table v0.0.0-20250302173100-264081644811
 	github.com/TheBitDrifter/tteokbokki v0.0.0-20250303030551-030eef101ff5
-	github.com/TheBitDrifter/warehouse v0.0.0-20250310023627-79267f4dfc7b
+	github.com/TheBitDrifter/warehouse v0.0.0-20250310203812-ba1d51a7538e
 	github.com/hajimehoshi/ebiten/v2 v2.8.6
 	golang.org/x/image v0.24.0
 )

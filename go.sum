@@ -16,6 +16,8 @@ github.com/TheBitDrifter/warehouse v0.0.0-20250307171541-c185ebdc3731 h1:JT7KaO2
 github.com/TheBitDrifter/warehouse v0.0.0-20250307171541-c185ebdc3731/go.mod h1:XWwnN6J5VZpJiK6QMBQB6weGPfQewPAA0v33LEdWTC8=
 github.com/TheBitDrifter/warehouse v0.0.0-20250310023627-79267f4dfc7b h1:lYY/jxmtdewhhHZGE9xDGRfH7kRtaK/iD9f0TT/dnyo=
 github.com/TheBitDrifter/warehouse v0.0.0-20250310023627-79267f4dfc7b/go.mod h1:XWwnN6J5VZpJiK6QMBQB6weGPfQewPAA0v33LEdWTC8=
+github.com/TheBitDrifter/warehouse v0.0.0-20250310203812-ba1d51a7538e h1:jCtwdp+vv+2z/aeUTBFyDFb95aBy8GaHYyFlD6If08M=
+github.com/TheBitDrifter/warehouse v0.0.0-20250310203812-ba1d51a7538e/go.mod h1:XWwnN6J5VZpJiK6QMBQB6weGPfQewPAA0v33LEdWTC8=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 h1:Gk1XUEttOk0/hb6Tq3WkmutWa0ZLhNn/6fc6XZpM7tM=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325/go.mod h1:ulhSQcbPioQrallSuIzF8l1NKQoD7xmMZc5NxzibUMY=
 github.com/ebitengine/hideconsole v1.0.0 h1:5J4U0kXF+pv/DhiXt5/lTz0eO5ogJ1iXb8Yj1yReDqE=

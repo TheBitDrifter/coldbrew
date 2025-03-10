@@ -76,9 +76,12 @@ func NewClient(baseResX, baseResY, maxSpritesCached, maxSoundsCached, maxScenesC
 
 // Start initializes and runs the game loop.
 func (cli *client) Start() error {
+	cli.sceneManager.mu.Lock()
 	if len(cli.loadingScenes) == 0 {
 		cli.loadingScenes = append(cli.loadingScenes, defaultLoadingScene)
 	}
+	cli.sceneManager.mu.Unlock()
+
 	err := ebiten.RunGame(cli)
 	if err != nil {
 		return err
@@ -88,7 +91,13 @@ func (cli *client) Start() error {
 
 // LoadScenes loads active scenes
 func (cli *client) LoadScenes() error {
-	for _, scene := range cli.activeScenes {
+	// Take a snapshot of active scenes under lock to avoid race conditions
+	cli.sceneManager.mu.RLock()
+	activeScenes := make([]Scene, len(cli.activeScenes))
+	copy(activeScenes, cli.activeScenes)
+	cli.sceneManager.mu.RUnlock()
+
+	for _, scene := range activeScenes {
 		if !scene.IsLoaded() && !scene.IsLoading() {
 			if err := cli.load(scene, globalSpriteCache, globalSoundCache); err != nil {
 				cli.cacheBust.Store(true)
@@ -102,7 +111,14 @@ func (cli *client) Update() error {
 	if inpututil.IsKeyJustReleased(ClientConfig.DebugKey()) && !isProd {
 		ClientConfig.DebugVisual = !ClientConfig.DebugVisual
 	}
-	for _, s := range cli.activeScenes {
+
+	// Take a snapshot of active scenes
+	cli.sceneManager.mu.RLock()
+	activeScenes := make([]Scene, len(cli.activeScenes))
+	copy(activeScenes, cli.activeScenes)
+	cli.sceneManager.mu.RUnlock()
+
+	for _, s := range activeScenes {
 		_, err := s.ExecutePlan()
 		if err != nil {
 			return err
@@ -114,7 +130,14 @@ func (cli *client) Update() error {
 		cli.cacheBust.Store(false)
 		swapCacheSpr := warehouse.FactoryNewCache[Sprite](ClientConfig.maxSpritesCached)
 		swapCacheSnd := warehouse.FactoryNewCache[Sound](ClientConfig.maxSoundsCached)
-		for _, s := range cli.activeScenes {
+
+		// Get another snapshot for loading
+		cli.sceneManager.mu.RLock()
+		activeScenesToLoad := make([]Scene, len(cli.activeScenes))
+		copy(activeScenesToLoad, cli.activeScenes)
+		cli.sceneManager.mu.RUnlock()
+
+		for _, s := range activeScenesToLoad {
 			err := cli.load(s, swapCacheSpr, swapCacheSnd)
 			if err != nil {
 				return err
@@ -134,7 +157,16 @@ func (cli *client) Update() error {
 			return err
 		}
 	}
-	for _, activeScene := range cli.activeScenes {
+
+	// Take a snapshot of active scenes again for client systems
+	cli.sceneManager.mu.RLock()
+	activeScenes = make([]Scene, len(cli.activeScenes))
+	copy(activeScenes, cli.activeScenes)
+	loadingScenes := make([]Scene, len(cli.loadingScenes))
+	copy(loadingScenes, cli.loadingScenes)
+	cli.sceneManager.mu.RUnlock()
+
+	for _, activeScene := range activeScenes {
 		cameraReady := true
 		cameras := cli.ActiveCamerasFor(activeScene)
 		for _, cam := range cameras {
@@ -143,15 +175,17 @@ func (cli *client) Update() error {
 			}
 		}
 		if !cameraReady || !activeScene.Ready() {
-			loadingScene := cli.LoadingScenes()[0]
-			for _, coreSys := range loadingScene.CoreSystems() {
-				err := coreSys.Run(loadingScene, 1.0/float64(ClientConfig.tps))
-				if err != nil {
-					return err
+			if len(loadingScenes) > 0 {
+				loadingScene := loadingScenes[0]
+				for _, coreSys := range loadingScene.CoreSystems() {
+					err := coreSys.Run(loadingScene, 1.0/float64(ClientConfig.tps))
+					if err != nil {
+						return err
+					}
 				}
-			}
-			for _, clientSys := range loadingScene.ClientSystems() {
-				clientSys.Run(cli, loadingScene)
+				for _, clientSys := range loadingScene.ClientSystems() {
+					clientSys.Run(cli, loadingScene)
+				}
 			}
 		}
 		if activeScene.Ready() {
@@ -192,7 +226,15 @@ func (cli *client) Draw(image *ebiten.Image) {
 		renderSys.Render(cli, screen)
 	}
 
-	for _, activeScene := range cli.activeScenes {
+	// Take a snapshot of active scenes for rendering
+	cli.sceneManager.mu.RLock()
+	activeScenes := make([]Scene, len(cli.activeScenes))
+	copy(activeScenes, cli.activeScenes)
+	loadingScenes := make([]Scene, len(cli.loadingScenes))
+	copy(loadingScenes, cli.loadingScenes)
+	cli.sceneManager.mu.RUnlock()
+
+	for _, activeScene := range activeScenes {
 		renderers := activeScene.Renderers()
 		cameraReady := true
 		cameras := cli.ActiveCamerasFor(activeScene)
@@ -201,12 +243,16 @@ func (cli *client) Draw(image *ebiten.Image) {
 				cameraReady = false
 			}
 		}
+
 		if !activeScene.Ready() || !cameraReady {
-			loadingScene := cli.LoadingScenes()[0]
-			for _, renderSys := range loadingScene.Renderers() {
-				renderSys.Render(activeScene, screen, cli)
+			if len(loadingScenes) > 0 {
+				loadingScene := loadingScenes[0]
+				for _, renderSys := range loadingScene.Renderers() {
+					renderSys.Render(activeScene, screen, cli)
+				}
 			}
 		}
+
 		for _, renderSys := range renderers {
 			if !activeScene.Ready() {
 				continue
@@ -214,6 +260,7 @@ func (cli *client) Draw(image *ebiten.Image) {
 			renderSys.Render(activeScene, screen, cli)
 		}
 	}
+
 	if ClientConfig.DebugVisual {
 		stats := fmt.Sprintf("FRAMES: %v\nTICKS: %v", ebiten.ActualFPS(), ebiten.ActualTPS())
 		ebitenutil.DebugPrint(screen.Image(), stats)

@@ -46,6 +46,7 @@ func (loader *spriteLoader) Load(spriteBundle *blueprintclient.SpriteBundle, cac
 		}
 
 		loader.mu.Lock()
+		defer loader.mu.Unlock()
 		spr, err := loader.loadSpriteFromPath(spriteBlueprint.Location.Key)
 		if err != nil {
 			return err
@@ -56,7 +57,6 @@ func (loader *spriteLoader) Load(spriteBundle *blueprintclient.SpriteBundle, cac
 			return err
 		}
 		spriteBlueprint.Location.Index = uint32(index)
-		loader.mu.Unlock()
 	}
 	return nil
 }

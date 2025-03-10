@@ -2,6 +2,7 @@ package coldbrew
 
 import (
 	"errors"
+	"sync"
 	"sync/atomic"
 
 	"github.com/TheBitDrifter/bark"
@@ -16,8 +17,6 @@ var _ SceneManager = &sceneManager{}
 type SceneManager interface {
 	// Scene access
 
-	// ActiveScenes returns all currently active scenes
-	ActiveScenes() []Scene
 	// IsActive checks if the given scene is currently active
 	IsActive(Scene) bool
 	// LoadingScenes returns all scenes currently being loaded
@@ -26,6 +25,7 @@ type SceneManager interface {
 	Cache() warehouse.Cache[Scene]
 
 	// Scene lifecycle
+	ActiveScenes() []Scene
 
 	// RegisterScene creates and registers a new scene with the provided configuration
 	RegisterScene(string, int, int, blueprint.Plan, []RenderSystem, []ClientSystem, []blueprint.CoreSystem) error
@@ -38,6 +38,7 @@ type SceneManager interface {
 }
 
 type sceneManager struct {
+	mu            sync.RWMutex
 	activeScenes  []Scene
 	loadingScenes []Scene
 	cache         warehouse.Cache[Scene]
@@ -51,10 +52,21 @@ func newSceneManager(maxScenesCached int) *sceneManager {
 	}
 }
 
-// Scene access methods
-func (m *sceneManager) ActiveScenes() []Scene { return m.activeScenes }
+func (m *sceneManager) ActiveScenes() []Scene {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
+	// Create a copy to avoid race conditions on the returned slice
+	result := make([]Scene, len(m.activeScenes))
+	copy(result, m.activeScenes)
+	return result
+}
+
+// Scene access methods
 func (m *sceneManager) IsActive(check Scene) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	for _, match := range m.activeScenes {
 		if check == match {
 			return true
@@ -63,9 +75,22 @@ func (m *sceneManager) IsActive(check Scene) bool {
 	return false
 }
 
-func (m *sceneManager) LoadingScenes() []Scene { return m.loadingScenes }
+func (m *sceneManager) LoadingScenes() []Scene {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-func (m *sceneManager) Cache() warehouse.Cache[Scene] { return m.cache }
+	// Create a copy to avoid race conditions on the returned slice
+	result := make([]Scene, len(m.loadingScenes))
+	copy(result, m.loadingScenes)
+	return result
+}
+
+func (m *sceneManager) Cache() warehouse.Cache[Scene] {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.cache
+}
 
 // ActivateScene adds a target scene to active scenes and transfers specified entities from origin
 func (m *sceneManager) ActivateScene(target Scene, entities ...warehouse.Entity) error {
@@ -76,6 +101,10 @@ func (m *sceneManager) ActivateScene(target Scene, entities ...warehouse.Entity)
 			return bark.AddTrace(err)
 		}
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, scene := range m.activeScenes {
 		if scene == target {
 			target.SetSelectedTick()
@@ -91,6 +120,9 @@ func (m *sceneManager) ActivateScene(target Scene, entities ...warehouse.Entity)
 // ChangeScene replaces the current active scene with the target scene
 // Only works when exactly one scene is active
 func (m *sceneManager) ChangeScene(target Scene, entities ...warehouse.Entity) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if len(m.activeScenes) > 1 {
 		return bark.AddTrace(
 			errors.New("cannot use change scene api when multiple scenes are active — use activate scene api instead"),
@@ -114,11 +146,15 @@ func (m *sceneManager) ChangeScene(target Scene, entities ...warehouse.Entity) e
 
 // DeactivateScene removes the target scene from the active scenes list
 func (m *sceneManager) DeactivateScene(target Scene) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for i, scene := range m.activeScenes {
 		if scene == target {
 			lastIdx := len(m.activeScenes) - 1
 			m.activeScenes[i] = m.activeScenes[lastIdx]
 			m.activeScenes = m.activeScenes[:lastIdx]
+			break
 		}
 	}
 }
@@ -137,6 +173,10 @@ func (m *sceneManager) RegisterScene(
 	if err != nil {
 		return bark.AddTrace(err)
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.cache.Register(name, newScene)
 	if len(m.activeScenes) == 0 {
 		m.activeScenes = append(m.activeScenes, newScene)
