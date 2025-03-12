@@ -45,18 +45,22 @@ func (loader *spriteLoader) Load(spriteBundle *blueprintclient.SpriteBundle, cac
 			continue
 		}
 
+		// Lock for write operations
 		loader.mu.Lock()
-		defer loader.mu.Unlock()
 		spr, err := loader.loadSpriteFromPath(spriteBlueprint.Location.Key)
 		if err != nil {
+			loader.mu.Unlock()
 			return err
 		}
 
 		index, err := cache.Register(spriteBlueprint.Location.Key, spr)
 		if err != nil {
+			loader.mu.Unlock()
 			return err
 		}
+
 		spriteBlueprint.Location.Index = uint32(index)
+		loader.mu.Unlock()
 	}
 	return nil
 }

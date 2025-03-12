@@ -36,7 +36,7 @@ func (CameraFollowerSystem) Run(cli coldbrew.LocalClient, scene coldbrew.Scene) 
 		targetY := playerPos.Y - centerY
 
 		// Set the camera position towards the matched player position with lerp
-		smoothness := 0.04
+		smoothness := 0.01
 		cameraScenePosition.X, cameraScenePosition.Y = lerpVec(
 			cameraScenePosition.X, cameraScenePosition.Y, targetX, targetY, smoothness,
 		)

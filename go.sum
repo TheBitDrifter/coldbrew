@@ -4,6 +4,8 @@ github.com/TheBitDrifter/blueprint v0.0.0-20250307171751-3c42814354d5 h1:IaOvler
 github.com/TheBitDrifter/blueprint v0.0.0-20250307171751-3c42814354d5/go.mod h1:gkNQ64i1Cwnuq9MmlxQVvwkiL5CFCjWnJfYyn1Yx2B0=
 github.com/TheBitDrifter/blueprint v0.0.0-20250309203041-b6ef1c264674 h1:L7zBIdh3jHM/rGOfIaoU9dO4vZeluFv9IuwH9mBt8F8=
 github.com/TheBitDrifter/blueprint v0.0.0-20250309203041-b6ef1c264674/go.mod h1:gkNQ64i1Cwnuq9MmlxQVvwkiL5CFCjWnJfYyn1Yx2B0=
+github.com/TheBitDrifter/blueprint v0.0.0-20250312181352-30002bd4eec6 h1:zZzOxR0xLzItrrg9sOb4s9tzwOCxTNuaAerrsuU9g+4=
+github.com/TheBitDrifter/blueprint v0.0.0-20250312181352-30002bd4eec6/go.mod h1:gkNQ64i1Cwnuq9MmlxQVvwkiL5CFCjWnJfYyn1Yx2B0=
 github.com/TheBitDrifter/mask v0.0.0-20250302170854-74953aa585aa h1:4uVpECsjSHrl8jGNec9CXKj8zL+cranSx1FOVEa3G7E=
 github.com/TheBitDrifter/mask v0.0.0-20250302170854-74953aa585aa/go.mod h1:2Gumixx/FRZwxlwMNCpSr38UTbS5gUSSGdntrSmivGk=
 github.com/TheBitDrifter/table v0.0.0-20250302173100-264081644811 h1:D0ZpB3P/L6nL0Uj70AUg+SAgwuUQKNpZUukdcwwlyhU=
@@ -18,6 +20,8 @@ github.com/TheBitDrifter/warehouse v0.0.0-20250310023627-79267f4dfc7b h1:lYY/jxm
 github.com/TheBitDrifter/warehouse v0.0.0-20250310023627-79267f4dfc7b/go.mod h1:XWwnN6J5VZpJiK6QMBQB6weGPfQewPAA0v33LEdWTC8=
 github.com/TheBitDrifter/warehouse v0.0.0-20250310203812-ba1d51a7538e h1:jCtwdp+vv+2z/aeUTBFyDFb95aBy8GaHYyFlD6If08M=
 github.com/TheBitDrifter/warehouse v0.0.0-20250310203812-ba1d51a7538e/go.mod h1:XWwnN6J5VZpJiK6QMBQB6weGPfQewPAA0v33LEdWTC8=
+github.com/TheBitDrifter/warehouse v0.0.0-20250311192542-2ece00d3a2dc h1:WM0J9xtD/yZs53daAyZdIk4zpg3AY0V2GMudFe5nKkk=
+github.com/TheBitDrifter/warehouse v0.0.0-20250311192542-2ece00d3a2dc/go.mod h1:XWwnN6J5VZpJiK6QMBQB6weGPfQewPAA0v33LEdWTC8=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325 h1:Gk1XUEttOk0/hb6Tq3WkmutWa0ZLhNn/6fc6XZpM7tM=
 github.com/ebitengine/gomobile v0.0.0-20240911145611-4856209ac325/go.mod h1:ulhSQcbPioQrallSuIzF8l1NKQoD7xmMZc5NxzibUMY=
 github.com/ebitengine/hideconsole v1.0.0 h1:5J4U0kXF+pv/DhiXt5/lTz0eO5ogJ1iXb8Yj1yReDqE=

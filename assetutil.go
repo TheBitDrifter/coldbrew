@@ -1,7 +1,7 @@
 package coldbrew
 
 import (
-	"errors"
+	"fmt"
 
 	blueprintclient "github.com/TheBitDrifter/blueprint/client"
 )
@@ -70,5 +70,5 @@ func MaterializeSound(soundBundle *blueprintclient.SoundBundle, sc blueprintclie
 			}
 		}
 	}
-	return Sound{}, errors.New("sound not found")
+	return Sound{}, fmt.Errorf("%v not found", sc)
 }

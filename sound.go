@@ -2,6 +2,7 @@ package coldbrew
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
@@ -14,7 +15,6 @@ type Sound struct {
 	audioCtx      *audio.Context
 	players       []*audio.Player
 	currentVolume float64
-	isPaused      bool
 }
 
 // newSound creates a new Sound with multiple audio players for concurrent playback
@@ -39,6 +39,7 @@ func newSound(name string, data []byte, audioCtx *audio.Context, audioPlayerCoun
 		if err != nil {
 			return Sound{}, err
 		}
+
 		snd.players[i] = player
 	}
 	return snd, nil
@@ -50,14 +51,24 @@ func (s Sound) GetPlayer(i int) *audio.Player {
 }
 
 // GetAnyAvailable returns an available player that is not currently playing,
-// or the first player if all are in use
-func (s Sound) GetAnyAvailable() *audio.Player {
+func (s Sound) GetAnyAvailable() (*audio.Player, error) {
 	// First, try to find any player that's not currently playing
-	for _, player := range s.players {
-		if !player.IsPlaying() {
-			return player
+	for i := range s.players {
+		if !s.players[i].IsPlaying() {
+			return s.players[i], nil
 		}
 	}
-	// If i is out of bounds, return the first player as a last resort
+	return nil, errors.New("no available player")
+}
+
+// GetAnyAvailable returns an available player that is not currently playing,
+// or the first player if all are in use
+func (s Sound) GetAny() *audio.Player {
+	// First, try to find any player that's not currently playing
+	for i := range s.players {
+		if !s.players[i].IsPlaying() {
+			return s.players[i]
+		}
+	}
 	return s.players[0]
 }

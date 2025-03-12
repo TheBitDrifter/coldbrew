@@ -102,7 +102,7 @@ func (sys PlayerSoundSystem) Run(cli coldbrew.LocalClient, scene coldbrew.Scene)
 
 				// Use any available player to avoid interrupting previous steps
 				// This allows overlapping footstep sounds for natural running
-				player := runSound.GetAnyAvailable()
+				player, _ := runSound.GetAnyAvailable()
 
 				if !player.IsPlaying() {
 					player.Rewind()

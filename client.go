@@ -38,6 +38,7 @@ type LocalClient interface {
 	CameraManager
 	SystemManager
 	ConfigManager
+	LocalClientSceneManager
 	ebiten.Game
 }
 
@@ -104,6 +105,7 @@ func (cli *client) LoadScenes() error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -112,7 +114,6 @@ func (cli *client) Update() error {
 		ClientConfig.DebugVisual = !ClientConfig.DebugVisual
 	}
 
-	// Take a snapshot of active scenes
 	cli.sceneManager.mu.RLock()
 	activeScenes := make([]Scene, len(cli.activeScenes))
 	copy(activeScenes, cli.activeScenes)
@@ -184,7 +185,10 @@ func (cli *client) Update() error {
 					}
 				}
 				for _, clientSys := range loadingScene.ClientSystems() {
-					clientSys.Run(cli, loadingScene)
+					err := clientSys.Run(cli, loadingScene)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -196,7 +200,10 @@ func (cli *client) Update() error {
 				}
 			}
 			for _, clientSys := range activeScene.ClientSystems() {
-				clientSys.Run(cli, activeScene)
+				err := clientSys.Run(cli, activeScene)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -295,9 +302,9 @@ func (cli *client) load(scene Scene, spriteCache warehouse.Cache[Sprite], soundC
 	if !scene.TryStartLoading() {
 		return nil
 	}
-	defer func() {
-		scene.SetLoading(false)
-	}()
+	defer scene.SetLoading(false)
+	defer scene.SetLoaded(true)
+
 	sto := scene.Storage()
 	cursor := warehouse.Factory.NewCursor(blueprint.Queries.SpriteBundle, sto)
 	for cursor.Next() {
@@ -306,6 +313,7 @@ func (cli *client) load(scene Scene, spriteCache warehouse.Cache[Sprite], soundC
 		if err != nil {
 			return err
 		}
+
 	}
 	cursor = warehouse.Factory.NewCursor(blueprint.Queries.SoundBundle, sto)
 	for cursor.Next() {
@@ -315,7 +323,6 @@ func (cli *client) load(scene Scene, spriteCache warehouse.Cache[Sprite], soundC
 			return err
 		}
 	}
-	scene.SetLoaded(true)
 	return nil
 }
 

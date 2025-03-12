@@ -151,6 +151,9 @@ func RenderBackground(
 	camIndex := cam.Index()
 	currentTrans := &bgConfig.RelativeTranslations[camIndex]
 
+	if bgConfig.DisableLooping {
+		bgCount = 1
+	}
 	// Render the background layers
 	for i := 0; i < bgCount; i++ {
 		opts := &ebiten.DrawImageOptions{}

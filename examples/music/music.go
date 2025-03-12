@@ -55,6 +55,11 @@ func main() {
 	}
 }
 
+var musicSoundConfig = blueprintclient.SoundConfig{
+	Path:             "music.wav",
+	AudioPlayerCount: 1,
+}
+
 func exampleScenePlan(height, width int, sto warehouse.Storage) error {
 	spriteArchetype, err := sto.NewOrExistingArchetype(
 		blueprintclient.Components.SoundBundle,
@@ -64,7 +69,7 @@ func exampleScenePlan(height, width int, sto warehouse.Storage) error {
 	}
 
 	err = spriteArchetype.Generate(1,
-		blueprintclient.NewSoundBundle().AddSoundFromPath("music.wav"),
+		blueprintclient.NewSoundBundle().AddSoundFromConfig(musicSoundConfig),
 	)
 	if err != nil {
 		return err
@@ -77,26 +82,26 @@ type musicSystem struct {
 }
 
 func (sys *musicSystem) Run(lc coldbrew.LocalClient, scene coldbrew.Scene) error {
+	if inpututil.IsKeyJustPressed(ebiten.Key1) && sys.volume == 0 {
+		sys.volume = 1
+	} else if inpututil.IsKeyJustPressed(ebiten.Key1) && sys.volume == 1 {
+		sys.volume = 0
+	}
+
 	musicQuery := warehouse.Factory.NewQuery().And(blueprintclient.Components.SoundBundle)
 	cursor := scene.NewCursor(musicQuery)
 
 	for cursor.Next() {
 		soundBundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
 
-		sounds := coldbrew.MaterializeSounds(soundBundle)
-		player := sounds[0].GetPlayer(0)
+		sound, _ := coldbrew.MaterializeSound(soundBundle, musicSoundConfig)
+		player := sound.GetAny()
 		player.SetVolume(sys.volume)
 
 		if !player.IsPlaying() {
 			player.Rewind()
 			player.Play()
 		}
-	}
-
-	if inpututil.IsKeyJustPressed(ebiten.Key1) && sys.volume == 0 {
-		sys.volume = 1
-	} else if inpututil.IsKeyJustPressed(ebiten.Key1) && sys.volume == 1 {
-		sys.volume = 0
 	}
 	return nil
 }
