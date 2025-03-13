@@ -32,7 +32,7 @@ func (PlayerTransferSystem) Run(cli coldbrew.Client) error {
 
 	// --- Step 1: Detect player transfer requests ---
 	// Iterate through all active scenes
-	for _, activeScene := range cli.ActiveScenes() {
+	for activeScene := range cli.ActiveScenes() {
 		// Skip scenes that aren't fully loaded yet
 		if !activeScene.Ready() {
 			continue
@@ -40,17 +40,19 @@ func (PlayerTransferSystem) Run(cli coldbrew.Client) error {
 
 		// Get all entities with input buffers in this scene
 		cursor := activeScene.NewCursor(blueprint.Queries.InputBuffer)
-		for cursor.Next() {
+		for range cursor.Next() {
 			// Check for player transfer input
 			inputBuffer := blueprint_input.Components.InputBuffer.GetFromCursor(cursor)
-			_, transferRequested := inputBuffer.ConsumeInput(actions.PlayerTransfer)
+
+			stamped, transferRequested := inputBuffer.ConsumeInput(actions.PlayerTransfer)
 
 			if transferRequested {
+
 				// --- Apply cooldown to prevent rapid transfers ---
 				const cooldownTicks = 60 // ~1 second at 60 FPS
 
 				// Check if player is still in cooldown period
-				inCooldown := (cli.CurrentTick() - activeScene.LastSelectedTick()) <= cooldownTicks
+				inCooldown := (cli.CurrentTick()-activeScene.LastSelectedTick()) <= cooldownTicks || cli.CurrentTick()-stamped.Tick > 5
 				if inCooldown {
 					continue
 				}
@@ -66,7 +68,9 @@ func (PlayerTransferSystem) Run(cli coldbrew.Client) error {
 				var sceneTargetName string
 				if activeScene.Name() == scenes.PrimarySceneName {
 					sceneTargetName = scenes.SecondarySceneName
-				} else {
+				} else if activeScene.Name() == scenes.SecondarySceneName {
+					sceneTargetName = scenes.TertiarySceneName
+				} else if activeScene.Name() == scenes.TertiarySceneName {
 					sceneTargetName = scenes.PrimarySceneName
 				}
 
@@ -86,6 +90,7 @@ func (PlayerTransferSystem) Run(cli coldbrew.Client) error {
 					target:       targetScene,
 					playerEntity: currentPlayerEntity,
 				}
+
 				pending = append(pending, transfer)
 			}
 		}
@@ -99,8 +104,9 @@ func (PlayerTransferSystem) Run(cli coldbrew.Client) error {
 	}
 
 	// --- Step 3: Clean up empty scenes ---
+	//
 	// Deactivate any scenes that no longer have player entities
-	for _, activeScene := range cli.ActiveScenes() {
+	for activeScene := range cli.ActiveScenes() {
 		cursor := activeScene.NewCursor(blueprint.Queries.InputBuffer)
 		if cursor.TotalMatched() == 0 {
 			// No player entities with input buffers left in this scene

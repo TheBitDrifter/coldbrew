@@ -1,6 +1,8 @@
 package coresystems
 
 import (
+	"log"
+
 	"github.com/TheBitDrifter/blueprint"
 	blueprintmotion "github.com/TheBitDrifter/blueprint/motion"
 	blueprintspatial "github.com/TheBitDrifter/blueprint/spatial"
@@ -19,9 +21,9 @@ func (s PlayerBlockCollisionSystem) Run(scene blueprint.Scene, dt float64) error
 	playerCursor := scene.NewCursor(blueprint.Queries.InputBuffer)
 
 	// Outer loop is blocks
-	for blockTerrainCursor.Next() {
+	for range blockTerrainCursor.Next() {
 		// Inner is players
-		for playerCursor.Next() {
+		for range playerCursor.Next() {
 			// Delegate to helper
 			err := s.resolve(scene, blockTerrainCursor, playerCursor) // Now pass in the scene
 			if err != nil {
@@ -52,6 +54,7 @@ func (PlayerBlockCollisionSystem) resolve(scene blueprint.Scene, blockCursor, pl
 
 		// Prevents snapping onto terrain when the player is still jumping
 		if collisionResult.IsTopB() && playerDynamics.Vel.Y < 0 && !playerGrounded {
+			log.Println("is it this")
 			return nil
 		}
 		// Determine if ground is sloped

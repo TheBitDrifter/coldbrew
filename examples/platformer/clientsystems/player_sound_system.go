@@ -32,7 +32,7 @@ func (sys PlayerSoundSystem) Run(cli coldbrew.LocalClient, scene coldbrew.Scene)
 	cursor := scene.NewCursor(playersWithSoundsOnTheGround)
 
 	// Iterate over all matching players
-	for cursor.Next() {
+	for range cursor.Next() {
 		// --- Get required components ---
 		soundBundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
 		dyn := blueprintmotion.Components.Dynamics.GetFromCursor(cursor)

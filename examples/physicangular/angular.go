@@ -474,7 +474,7 @@ func (m *movementSystem) Run(scene blueprint.Scene, _ float64) error {
 
 	// Apply forces to all dynamic objects
 	cursor := scene.NewCursor(blueprint.Queries.Dynamics)
-	for cursor.Next() {
+	for range cursor.Next() {
 		dyn := blueprintmotion.Components.Dynamics.GetFromCursor(cursor)
 
 		// Skip static objects (walls)
@@ -525,12 +525,12 @@ func (boundaryCollisionSystem) Run(scene blueprint.Scene, _ float64) error {
 	boundaryCursor := scene.NewCursor(boundaryQuery)
 
 	// Check each movable shape against each boundary
-	for movableCursor.Next() {
+	for range movableCursor.Next() {
 		shapePos := blueprintspatial.Components.Position.GetFromCursor(movableCursor)
 		shapeShape := blueprintspatial.Components.Shape.GetFromCursor(movableCursor)
 		shapeDyn := blueprintmotion.Components.Dynamics.GetFromCursor(movableCursor)
 
-		for boundaryCursor.Next() {
+		for range boundaryCursor.Next() {
 			boundaryPos := blueprintspatial.Components.Position.GetFromCursor(boundaryCursor)
 			boundaryShape := blueprintspatial.Components.Shape.GetFromCursor(boundaryCursor)
 			boundaryDyn := blueprintmotion.Components.Dynamics.GetFromCursor(boundaryCursor)
@@ -579,7 +579,7 @@ func (shapeCollisionSystem) Run(scene blueprint.Scene, _ float64) error {
 	movableCursor := scene.NewCursor(movableQuery)
 	entityID := 0
 
-	for movableCursor.Next() {
+	for range movableCursor.Next() {
 		shapes = append(shapes, ShapeEntity{
 			Position: blueprintspatial.Components.Position.GetFromCursor(movableCursor),
 			Shape:    blueprintspatial.Components.Shape.GetFromCursor(movableCursor),

@@ -28,7 +28,7 @@ func (sys PlayerMovementSystem) Run(scene blueprint.Scene, dt float64) error {
 func (PlayerMovementSystem) handleHorizontal(scene blueprint.Scene) {
 	// Get all entities with input buffers
 	cursor := scene.NewCursor(blueprint.Queries.InputBuffer)
-	for cursor.Next() {
+	for range cursor.Next() {
 		// --- Gather required components ---
 		dyn := blueprintmotion.Components.Dynamics.GetFromCursor(cursor)              // Physics properties
 		incomingInputs := blueprintinput.Components.InputBuffer.GetFromCursor(cursor) // User inputs
@@ -135,7 +135,7 @@ func (PlayerMovementSystem) handleJump(scene blueprint.Scene) {
 	cursor := scene.NewCursor(playersEligibleToJumpQuery)
 	currentTick := scene.CurrentTick()
 
-	for cursor.Next() {
+	for range cursor.Next() {
 		// Get required components
 		dyn := blueprintmotion.Components.Dynamics.GetFromCursor(cursor)
 		incomingInputs := blueprintinput.Components.InputBuffer.GetFromCursor(cursor)

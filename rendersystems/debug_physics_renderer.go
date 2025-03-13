@@ -51,7 +51,7 @@ func (sys *DebugRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		}
 		shapes := make([]ShapeInfo, 0)
 		shapeCursor := scene.NewCursor(blueprint.Queries.Shape)
-		for shapeCursor.Next() {
+		for range shapeCursor.Next() {
 			shape := blueprintspatial.Components.Shape.GetFromCursor(shapeCursor)
 			pos := blueprintspatial.Components.Position.GetFromCursor(shapeCursor)
 			if shape != nil && pos != nil {

@@ -16,7 +16,7 @@ func (BackgroundScrollSystem) Run(cli coldbrew.LocalClient, scene coldbrew.Scene
 	for _, cam := range activeCameras {
 		cursor := scene.NewCursor(blueprint.Queries.ParallaxBackground)
 		_, worldPosition := cam.Positions()
-		for cursor.Next() {
+		for range cursor.Next() {
 			config := blueprintclient.Components.ParallaxBackground.GetFromCursor(cursor)
 			// Apply inverse movement based on camera position and configured speeds
 			config.RelativeTranslations[cam.Index()].X = worldPosition.X * config.SpeedX * -1

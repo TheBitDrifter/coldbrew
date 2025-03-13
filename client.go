@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"io/fs"
+	"sync"
 
 	"github.com/TheBitDrifter/blueprint"
 	blueprintclient "github.com/TheBitDrifter/blueprint/client"
@@ -19,8 +20,8 @@ import (
 )
 
 var (
-	tick        = 0
 	_    Client = &client{}
+	tick        = 0
 )
 
 // Client manages game state, rendering, and input
@@ -63,8 +64,8 @@ func NewClient(baseResX, baseResY, maxSpritesCached, maxSoundsCached, maxScenesC
 		assetManager:  newAssetManager(embeddedFS),
 	}
 	cli.inputManager = newInputManager(cli)
-	ClientConfig.maxSoundsCached = maxSoundsCached
-	ClientConfig.maxSpritesCached = maxSoundsCached
+	ClientConfig.maxSoundsCached.Store(uint32(maxSoundsCached))
+	ClientConfig.maxSpritesCached.Store(uint32(maxSpritesCached))
 	ClientConfig.baseResolution.x = baseResX
 	ClientConfig.baseResolution.y = baseResY
 	ClientConfig.resolution.x = baseResX
@@ -77,11 +78,9 @@ func NewClient(baseResX, baseResY, maxSpritesCached, maxSoundsCached, maxScenesC
 
 // Start initializes and runs the game loop.
 func (cli *client) Start() error {
-	cli.sceneManager.mu.Lock()
 	if len(cli.loadingScenes) == 0 {
 		cli.loadingScenes = append(cli.loadingScenes, defaultLoadingScene)
 	}
-	cli.sceneManager.mu.Unlock()
 
 	err := ebiten.RunGame(cli)
 	if err != nil {
@@ -90,84 +89,39 @@ func (cli *client) Start() error {
 	return nil
 }
 
-// LoadScenes loads active scenes
-func (cli *client) LoadScenes() error {
-	// Take a snapshot of active scenes under lock to avoid race conditions
-	cli.sceneManager.mu.RLock()
-	activeScenes := make([]Scene, len(cli.activeScenes))
-	copy(activeScenes, cli.activeScenes)
-	cli.sceneManager.mu.RUnlock()
+func (cli *client) Update() error {
+	cli.toggleDebugView()
 
-	for _, scene := range activeScenes {
-		if !scene.IsLoaded() && !scene.IsLoading() {
-			if err := cli.load(scene, globalSpriteCache, globalSoundCache); err != nil {
-				cli.cacheBust.Store(true)
-			}
-		}
+	err := cli.processNonExecutedPlansForActiveScenes()
+	if err != nil {
+		return err
 	}
 
+	cli.findAndLoadMissingAssetsForActiveScenesAsync()
+
+	if isCacheFull.Load() {
+		cli.resolveCacheForActiveScenes()
+	}
+
+	cli.captureInputs()
+
+	err = cli.runGlobalClientSystems()
+	if err != nil {
+		return err
+	}
+
+	err = cli.foo()
+	if err != nil {
+		return err
+	}
+
+	tick++
 	return nil
 }
 
-func (cli *client) Update() error {
-	if inpututil.IsKeyJustReleased(ClientConfig.DebugKey()) && !isProd {
-		ClientConfig.DebugVisual = !ClientConfig.DebugVisual
-	}
-
-	cli.sceneManager.mu.RLock()
-	activeScenes := make([]Scene, len(cli.activeScenes))
-	copy(activeScenes, cli.activeScenes)
-	cli.sceneManager.mu.RUnlock()
-
-	for _, s := range activeScenes {
-		_, err := s.ExecutePlan()
-		if err != nil {
-			return err
-		}
-	}
-	go cli.LoadScenes()
-
-	if cli.cacheBust.Load() {
-		cli.cacheBust.Store(false)
-		swapCacheSpr := warehouse.FactoryNewCache[Sprite](ClientConfig.maxSpritesCached)
-		swapCacheSnd := warehouse.FactoryNewCache[Sound](ClientConfig.maxSoundsCached)
-
-		// Get another snapshot for loading
-		cli.sceneManager.mu.RLock()
-		activeScenesToLoad := make([]Scene, len(cli.activeScenes))
-		copy(activeScenesToLoad, cli.activeScenes)
-		cli.sceneManager.mu.RUnlock()
-
-		for _, s := range activeScenesToLoad {
-			err := cli.load(s, swapCacheSpr, swapCacheSnd)
-			if err != nil {
-				return err
-			}
-		}
-		globalSpriteCache = swapCacheSpr
-		globalSoundCache = swapCacheSnd
-	}
-	cli.capturers.keyboard.Capture()
-	cli.capturers.mouse.Capture()
-	cli.capturers.gamepad.Capture()
-	cli.capturers.touch.Capture()
-
-	for _, globalClientSystem := range cli.globalClientSystems {
-		err := globalClientSystem.Run(cli)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Take a snapshot of active scenes again for client systems
-	cli.sceneManager.mu.RLock()
-	activeScenes = make([]Scene, len(cli.activeScenes))
-	copy(activeScenes, cli.activeScenes)
-	loadingScenes := make([]Scene, len(cli.loadingScenes))
-	copy(loadingScenes, cli.loadingScenes)
-	cli.sceneManager.mu.RUnlock()
-
-	for _, activeScene := range activeScenes {
+func (cli *client) foo() error {
+	loadingScenes := cli.loadingScenes
+	for activeScene := range cli.ActiveScenes() {
 		cameraReady := true
 		cameras := cli.ActiveCamerasFor(activeScene)
 		for _, cam := range cameras {
@@ -207,13 +161,149 @@ func (cli *client) Update() error {
 			}
 		}
 	}
-	for _, clientGlobalSecondarySystem := range cli.globalClientSecondarySystems {
-		err := clientGlobalSecondarySystem.Run(cli)
+	return nil
+}
+
+func (cli *client) toggleDebugView() {
+	if inpututil.IsKeyJustReleased(ClientConfig.DebugKey()) && !isProd {
+		ClientConfig.DebugVisual = !ClientConfig.DebugVisual
+	}
+}
+
+func (cli *client) processNonExecutedPlansForActiveScenes() error {
+	for s := range cli.ActiveScenes() {
+		_, err := s.ExecutePlan()
 		if err != nil {
 			return err
 		}
 	}
-	tick++
+	return nil
+}
+
+func (cli *client) findAndLoadMissingAssetsForActiveScenesAsync() {
+	for scene := range cli.ActiveScenes() {
+		if !scene.IsLoaded() && !scene.IsLoading() {
+			if scene.TryStartLoading() {
+				go func(s Scene) {
+					// Get read lock before accessing global caches
+					cacheSwapMutex.RLock()
+					defer cacheSwapMutex.RUnlock()
+
+					err := cli.loadAssetsForScene(s, globalSpriteCache, globalSoundCache)
+					if err != nil {
+						isCacheFull.Store(true)
+					}
+				}(scene)
+			}
+		}
+	}
+}
+
+func (cli *client) loadAssetsForScene(scene Scene, spriteCache warehouse.Cache[Sprite], soundCache warehouse.Cache[Sound]) error {
+	sto := scene.Storage()
+	cursor := warehouse.Factory.NewCursor(blueprint.Queries.SpriteBundle, sto)
+	for range cursor.Next() {
+		bundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
+		err := cli.SpriteLoader.Load(bundle, spriteCache)
+		if err != nil {
+			return err
+		}
+	}
+
+	cursor = warehouse.Factory.NewCursor(blueprint.Queries.SoundBundle, sto)
+	for range cursor.Next() {
+		bundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
+		err := cli.SoundLoader.Load(bundle, soundCache)
+		if err != nil {
+			return err
+		}
+	}
+	scene.SetLoading(false)
+	scene.SetLoaded(true)
+	return nil
+}
+
+func (cli *client) resolveCacheForActiveScenes() {
+	if isResolvingCache.CompareAndSwap(false, true) {
+		swapCacheSpr := warehouse.FactoryNewCache[Sprite](int(ClientConfig.maxSpritesCached.Load()))
+		swapCacheSnd := warehouse.FactoryNewCache[Sound](int(ClientConfig.maxSoundsCached.Load()))
+
+		var wg sync.WaitGroup
+		done := make(chan struct{})
+		errChan := make(chan error, cli.SceneCount())
+
+		// Process all active scenes in parallel
+		for s := range cli.ActiveScenes() {
+			// Let scenes continue operating normally
+			wg.Add(1)
+			go func(s Scene) {
+				defer wg.Done()
+				err := cli.loadAssetsForScene(s, swapCacheSpr, swapCacheSnd)
+				if err != nil {
+					errChan <- err
+				}
+			}(s)
+		}
+
+		// Start a goroutine to wait for all scene loading to complete
+		go func() {
+			wg.Wait()
+			close(done)
+		}()
+
+		go func() {
+			// Wait for all goroutines to finish
+			<-done
+
+			close(errChan)
+			var lastErr error
+			for err := range errChan {
+				lastErr = err
+			}
+
+			if lastErr != nil {
+				cannotResolveCache.Store(true)
+			} else {
+				// Reset the cache full flag
+				isCacheFull.Store(false)
+			}
+
+			isResolvingCache.Store(false)
+
+			// Callback
+			cli.onCacheResolveComplete(swapCacheSpr, swapCacheSnd, lastErr)
+		}()
+	}
+}
+
+func (cli *client) onCacheResolveComplete(spriteCache warehouse.Cache[Sprite], soundCache warehouse.Cache[Sound], err error) {
+	if err != nil {
+		handler := GetCacheResolveErrorHandler()
+		handler(err)
+		return
+	}
+
+	cacheSwapMutex.Lock()
+	defer cacheSwapMutex.Unlock()
+
+	globalSpriteCache = spriteCache
+	globalSoundCache = soundCache
+}
+
+func (cli *client) captureInputs() {
+	cli.capturers.keyboard.Capture()
+	cli.capturers.mouse.Capture()
+	cli.capturers.gamepad.Capture()
+	cli.capturers.touch.Capture()
+}
+
+func (cli *client) runGlobalClientSystems() error {
+	for _, globalClientSystem := range cli.globalClientSystems {
+		err := globalClientSystem.Run(cli)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -234,14 +324,7 @@ func (cli *client) Draw(image *ebiten.Image) {
 	}
 
 	// Take a snapshot of active scenes for rendering
-	cli.sceneManager.mu.RLock()
-	activeScenes := make([]Scene, len(cli.activeScenes))
-	copy(activeScenes, cli.activeScenes)
-	loadingScenes := make([]Scene, len(cli.loadingScenes))
-	copy(loadingScenes, cli.loadingScenes)
-	cli.sceneManager.mu.RUnlock()
-
-	for _, activeScene := range activeScenes {
+	for activeScene := range cli.ActiveScenes() {
 		renderers := activeScene.Renderers()
 		cameraReady := true
 		cameras := cli.ActiveCamerasFor(activeScene)
@@ -252,8 +335,8 @@ func (cli *client) Draw(image *ebiten.Image) {
 		}
 
 		if !activeScene.Ready() || !cameraReady {
-			if len(loadingScenes) > 0 {
-				loadingScene := loadingScenes[0]
+			if len(cli.loadingScenes) > 0 {
+				loadingScene := cli.loadingScenes[0]
 				for _, renderSys := range loadingScene.Renderers() {
 					renderSys.Render(activeScene, screen, cli)
 				}
@@ -296,34 +379,6 @@ func (cli client) ActivateCamera() (Camera, error) {
 		}
 	}
 	return nil, errors.New("all cameras occupied")
-}
-
-func (cli *client) load(scene Scene, spriteCache warehouse.Cache[Sprite], soundCache warehouse.Cache[Sound]) error {
-	if !scene.TryStartLoading() {
-		return nil
-	}
-	defer scene.SetLoading(false)
-	defer scene.SetLoaded(true)
-
-	sto := scene.Storage()
-	cursor := warehouse.Factory.NewCursor(blueprint.Queries.SpriteBundle, sto)
-	for cursor.Next() {
-		bundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
-		err := cli.spriteLoader.Load(bundle, spriteCache)
-		if err != nil {
-			return err
-		}
-
-	}
-	cursor = warehouse.Factory.NewCursor(blueprint.Queries.SoundBundle, sto)
-	for cursor.Next() {
-		bundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
-		err := cli.soundLoader.Load(bundle, soundCache)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 var defaultLoadingScene = func() *scene {

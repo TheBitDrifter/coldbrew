@@ -4,13 +4,11 @@ package coldbrew
 type SystemManager interface {
 	RegisterGlobalRenderSystem(...GlobalRenderSystem)
 	RegisterGlobalClientSystem(...GlobalClientSystem)
-	RegisterGlobalClientSecondarySystem(...GlobalClientSystem)
 }
 
 type systemManager struct {
-	globalRenderers              []GlobalRenderSystem
-	globalClientSystems          []GlobalClientSystem
-	globalClientSecondarySystems []GlobalClientSystem
+	globalRenderers     []GlobalRenderSystem
+	globalClientSystems []GlobalClientSystem
 }
 
 // RegisterGlobalRenderSystem adds one or more render systems to the global renderers
@@ -24,12 +22,5 @@ func (sm *systemManager) RegisterGlobalRenderSystem(renderers ...GlobalRenderSys
 func (sm *systemManager) RegisterGlobalClientSystem(systems ...GlobalClientSystem) {
 	for _, s := range systems {
 		sm.globalClientSystems = append(sm.globalClientSystems, s)
-	}
-}
-
-// RegisterGlobalClientSecondarySystem adds one or more client systems to run at the end of the update loop
-func (sm *systemManager) RegisterGlobalClientSecondarySystem(systems ...GlobalClientSystem) {
-	for _, s := range systems {
-		sm.globalClientSecondarySystems = append(sm.globalClientSecondarySystems, s)
 	}
 }

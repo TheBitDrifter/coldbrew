@@ -15,7 +15,7 @@ type GravitySystem struct{}
 
 func (GravitySystem) Run(scene blueprint.Scene, dt float64) error {
 	cursor := scene.NewCursor(blueprint.Queries.Dynamics)
-	for cursor.Next() {
+	for range cursor.Next() {
 		dyn := blueprintmotion.Components.Dynamics.GetFromCursor(cursor)
 		mass := 1 / dyn.InverseMass
 		gravity := motion.Forces.Generator.NewGravityForce(mass, DEFAULT_GRAVITY, PIXELS_PER_METER)

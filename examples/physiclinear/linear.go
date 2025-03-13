@@ -112,7 +112,7 @@ func (gravitySystem) Run(scene blueprint.Scene, _ float64) error {
 	)
 
 	cursor := scene.NewCursor(blueprint.Queries.Dynamics)
-	for cursor.Next() {
+	for range cursor.Next() {
 		dyn := blueprintmotion.Components.Dynamics.GetFromCursor(cursor)
 		mass := 1 / dyn.InverseMass
 		gravity := motion.Forces.Generator.NewGravityForce(mass, DEFAULT_GRAVITY, PIXELS_PER_METER)
@@ -136,8 +136,8 @@ func (collisionBounceSystem) Run(scene blueprint.Scene, _ float64) error {
 	boxCursor := scene.NewCursor(boxQuery)
 	floorCursor := scene.NewCursor(floorQuery)
 
-	for boxCursor.Next() {
-		for floorCursor.Next() {
+	for range boxCursor.Next() {
+		for range floorCursor.Next() {
 			boxPos := blueprintspatial.Components.Position.GetFromCursor(boxCursor)
 			boxShape := blueprintspatial.Components.Shape.GetFromCursor(boxCursor)
 			boxDyn := blueprintmotion.Components.Dynamics.GetFromCursor(boxCursor)
