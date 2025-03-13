@@ -91,7 +91,7 @@ func (sys *musicSystem) Run(lc coldbrew.LocalClient, scene coldbrew.Scene) error
 	musicQuery := warehouse.Factory.NewQuery().And(blueprintclient.Components.SoundBundle)
 	cursor := scene.NewCursor(musicQuery)
 
-	for cursor.Next() {
+	for range cursor.Next() {
 		soundBundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
 
 		sound, _ := coldbrew.MaterializeSound(soundBundle, musicSoundConfig)

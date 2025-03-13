@@ -60,7 +60,7 @@ func (sys *CameraSceneAssignerSystem) Run(cli coldbrew.Client) error {
 func (sys *CameraSceneAssignerSystem) processCamerasForActiveScenes(cli coldbrew.Client, cameras [coldbrew.MaxSplit]coldbrew.Camera) bool {
 	allScenesInactive := true
 
-	for _, scene := range cli.ActiveScenes() {
+	for scene := range cli.ActiveScenes() {
 		if !scene.Ready() {
 			continue
 		}
@@ -70,7 +70,7 @@ func (sys *CameraSceneAssignerSystem) processCamerasForActiveScenes(cli coldbrew
 
 		// Assign cameras to this scene
 		cameraIndexCursor := scene.NewCursor(blueprint.Queries.CameraIndex)
-		for cameraIndexCursor.Next() {
+		for range cameraIndexCursor.Next() {
 			camIndex := *blueprintclient.Components.CameraIndex.GetFromCursor(cameraIndexCursor)
 			cam := cameras[camIndex]
 			entry := cli.CameraSceneTracker()[cam]

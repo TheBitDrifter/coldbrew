@@ -49,12 +49,11 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 			scene = entry.Scene
 		} else {
 			sys.logger.Debug("Camera not assigned, attempting active scene 0", "cameraIndex", cam.Index())
-			active := cli.ActiveScenes()
-			if len(active) == 0 {
+			if cli.SceneCount() == 0 {
 				sys.logger.Debug("Camera not assigned, all scenes inactive, aborting render", "cameraIndex", cam.Index())
 				continue
 			}
-			scene = active[0]
+			scene = cli.ActiveScene(0)
 			sys.logger.Debug("Camera not assigned, assigning to active scene", "cameraIndex", cam.Index(), "active scene", scene.Name())
 			cli.CameraSceneTracker()[cam] = coldbrew.CameraSceneRecord{
 				Scene: scene,
@@ -67,10 +66,11 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		}
 		// Render backgrounds
 		cursor := scene.NewCursor(blueprint.Queries.ParallaxBackground)
-		for cursor.Next() {
+		for range cursor.Next() {
 			if ok, bgConfig := blueprintclient.Components.ParallaxBackground.GetFromCursorSafe(cursor); ok {
 				position := blueprintspatial.Components.Position.GetFromCursor(cursor)
 				sprBundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
+
 				backgroundSprite := coldbrew.MaterializeSprites(sprBundle)[0]
 				if sprBundle.Blueprints[0].Config.Active {
 					RenderBackground(backgroundSprite, position.Two, bgConfig, cam, scene.Width())
@@ -79,7 +79,7 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 		}
 
 		cursor = scene.NewCursor(blueprint.Queries.SpriteBundle)
-		for cursor.Next() {
+		for range cursor.Next() {
 			if blueprintclient.Components.ParallaxBackground.CheckCursor(cursor) {
 				continue
 			}

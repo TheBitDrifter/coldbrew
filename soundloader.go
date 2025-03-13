@@ -1,6 +1,7 @@
 package coldbrew
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,6 +14,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
+var defaultAudioCtx = audio.NewContext(44100)
+
+type SoundLoader interface {
+	Load(bundle *blueprintclient.SoundBundle, cache warehouse.Cache[Sound]) error
+}
+
 // soundLoader handles loading and caching of audio files
 type soundLoader struct {
 	mu       sync.RWMutex
@@ -24,7 +31,7 @@ type soundLoader struct {
 func NewSoundLoader(embeddedFS fs.FS) *soundLoader {
 	return &soundLoader{
 		fs:       embeddedFS,
-		audioCtx: audio.NewContext(44100),
+		audioCtx: defaultAudioCtx,
 	}
 }
 
@@ -43,12 +50,13 @@ func (loader *soundLoader) Load(bundle *blueprintclient.SoundBundle, cache wareh
 			continue
 		}
 
-		loader.mu.RLock()
 		soundIndex, ok := cache.GetIndex(soundBlueprint.Location.Key)
-		loader.mu.RUnlock()
 
 		if ok {
-			soundBlueprint.Location.Index = uint32(soundIndex)
+			if soundIndex > int(ClientConfig.maxSpritesCached.Load()) {
+				return errors.New("max sprites error")
+			}
+			soundBlueprint.Location.Index.Store(uint32(soundIndex))
 			continue
 		}
 
@@ -77,15 +85,16 @@ func (loader *soundLoader) Load(bundle *blueprintclient.SoundBundle, cache wareh
 			return fmt.Errorf("failed to create sound %s: %w", soundBlueprint.Location.Key, err)
 		}
 
-		loader.mu.Lock()
 		index, err := cache.Register(soundBlueprint.Location.Key, snd)
-		loader.mu.Unlock()
-
 		if err != nil {
 			return err
 		}
 
-		soundBlueprint.Location.Index = uint32(index)
+		if index > int(ClientConfig.maxSoundsCached.Load()) {
+			return errors.New("max sounds error")
+		}
+
+		soundBlueprint.Location.Index.Store(uint32(index))
 	}
 	return nil
 }

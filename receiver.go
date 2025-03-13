@@ -53,5 +53,6 @@ func (receiver *receiver) PopInputs() []blueprint_input.StampedInput {
 		removed = append(removed, input)
 	}
 	receiver.inputs = inputs{}
+
 	return removed
 }

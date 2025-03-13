@@ -108,7 +108,7 @@ func (inputSystem) Run(scene blueprint.Scene, _ float64) error {
 
 	cursor := scene.NewCursor(query)
 
-	for cursor.Next() {
+	for range cursor.Next() {
 		pos := blueprintspatial.Components.Position.GetFromCursor(cursor)
 		inputBuffer := blueprintinput.Components.InputBuffer.GetFromCursor(cursor)
 

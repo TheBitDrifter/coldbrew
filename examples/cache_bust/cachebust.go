@@ -26,12 +26,12 @@ const (
 	sceneTwoName = "s2"
 )
 
+// This example is setup so the scene change triggers the cache protocol
 func main() {
 	client := coldbrew.NewClient(
 		640,
 		360,
-		10,
-		10,
+		5, 10,
 		10,
 		assets,
 	)
@@ -107,7 +107,7 @@ func sceneOnePlan(height, width int, sto warehouse.Storage) error {
 
 func sceneTwoPlan(height, width int, sto warehouse.Storage) error {
 	err := blueprint.NewParallaxBackgroundBuilder(sto).
-		AddLayer("sky.png", 0.1, 0.1).
+		AddLayer("sky2.png", 0.1, 0.1).
 		Build()
 	if err != nil {
 		return err
@@ -166,7 +166,14 @@ func (basicTransferSystem) Run(cli coldbrew.Client) error {
 	}
 
 	for _, transfer := range pending {
-		cli.ChangeScene(transfer.target, transfer.playerEntity)
+		cli.ActivateScene(transfer.target, transfer.playerEntity)
+	}
+	for activeScene := range cli.ActiveScenes() {
+		cursor := activeScene.NewCursor(blueprint.Queries.CameraIndex)
+		if cursor.TotalMatched() == 0 {
+			// No player entities with input buffers left in this scene
+			cli.DeactivateScene(activeScene)
+		}
 	}
 
 	return nil

@@ -13,10 +13,9 @@ type InputBufferSystem struct{}
 
 // Run processes all active input buffers across scenes
 func (InputBufferSystem) Run(cli coldbrew.Client) error {
-	currentScenes := cli.ActiveScenes()
-	for i := range currentScenes {
-		inputBufferCursor := warehouse.Factory.NewCursor(blueprint.Queries.InputBuffer, currentScenes[i].Storage())
-		for inputBufferCursor.Next() {
+	for scene := range cli.ActiveScenes() {
+		inputBufferCursor := warehouse.Factory.NewCursor(blueprint.Queries.InputBuffer, scene.Storage())
+		for range inputBufferCursor.Next() {
 			buffer := blueprintinput.Components.InputBuffer.GetFromCursor(inputBufferCursor)
 			receiver := cli.Receiver(buffer.ReceiverIndex)
 			if !receiver.Active() {

@@ -25,7 +25,7 @@ func main() {
 	// Kinda weird resolution, but works for web demo
 	resolutionX := 640
 	resolutionY := 720
-	maxSpritesCached := 200
+	maxSpritesCached := 30
 	maxSoundsCached := 200
 	maxScenesCached := 10
 
@@ -91,6 +91,18 @@ func main() {
 		primarySceneWidth,
 		primarySceneHeight,
 		scenes.SecondaryScene,
+		renderSystems,
+		clientSystems,
+		coreSystems,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = client.RegisterScene(
+		scenes.TertiarySceneName,
+		primarySceneWidth,
+		primarySceneHeight,
+		scenes.TertiaryScene,
 		renderSystems,
 		clientSystems,
 		coreSystems,

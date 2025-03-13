@@ -1,6 +1,7 @@
 package coldbrew
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"io/fs"
@@ -12,6 +13,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
+
+type SpriteLoader interface {
+	Load(spriteBundle *blueprintclient.SpriteBundle, cache warehouse.Cache[Sprite]) error
+}
 
 // spriteLoader handles loading and caching of sprite images
 type spriteLoader struct {
@@ -30,38 +35,41 @@ func NewSpriteLoader(embeddedFS fs.FS) *spriteLoader {
 // It uses the provided cache for lookups and registration
 // which enables cache busting when a new cache is provided
 func (loader *spriteLoader) Load(spriteBundle *blueprintclient.SpriteBundle, cache warehouse.Cache[Sprite]) error {
+	// loader.mu.Lock()
+	// defer loader.mu.Unlock()
+
 	for i := range spriteBundle.Blueprints {
+
 		spriteBlueprint := &spriteBundle.Blueprints[i]
 		if spriteBlueprint.Location.Key == "" {
 			continue
 		}
 
-		loader.mu.RLock()
 		spriteIndex, ok := cache.GetIndex(spriteBlueprint.Location.Key)
-		loader.mu.RUnlock()
-
 		if ok {
-			spriteBlueprint.Location.Index = uint32(spriteIndex)
+			if spriteIndex > int(ClientConfig.maxSpritesCached.Load()) {
+				return errors.New("max sprites error")
+			}
+			spriteBlueprint.Location.Index.Store(uint32(spriteIndex))
 			continue
 		}
 
-		// Lock for write operations
-		loader.mu.Lock()
 		spr, err := loader.loadSpriteFromPath(spriteBlueprint.Location.Key)
 		if err != nil {
-			loader.mu.Unlock()
 			return err
 		}
 
 		index, err := cache.Register(spriteBlueprint.Location.Key, spr)
 		if err != nil {
-			loader.mu.Unlock()
 			return err
 		}
+		if index > int(ClientConfig.maxSpritesCached.Load()) {
+			return errors.New("max sprites error")
+		}
 
-		spriteBlueprint.Location.Index = uint32(index)
-		loader.mu.Unlock()
+		spriteBlueprint.Location.Index.Store(uint32(index))
 	}
+
 	return nil
 }
 

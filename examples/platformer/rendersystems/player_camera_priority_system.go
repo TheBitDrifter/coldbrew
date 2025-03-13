@@ -18,7 +18,7 @@ func (PlayerCameraPriorityRenderer) Render(scene coldbrew.Scene, screen coldbrew
 		}
 		// First, render all non-matching entities (the players unrelated to the current camera)
 		playerCursor := scene.NewCursor(blueprint.Queries.InputBuffer)
-		for playerCursor.Next() {
+		for range playerCursor.Next() {
 			camIndex := blueprintclient.Components.CameraIndex.GetFromCursor(playerCursor)
 			// Skip entities that match the current camera's index
 			if int(*camIndex) == cam.Index() {
@@ -29,7 +29,7 @@ func (PlayerCameraPriorityRenderer) Render(scene coldbrew.Scene, screen coldbrew
 
 		// Then render matching entities last (the player that 'owns' the camera)
 		playerCursor = scene.NewCursor(blueprint.Queries.InputBuffer)
-		for playerCursor.Next() {
+		for range playerCursor.Next() {
 			camIndex := blueprintclient.Components.CameraIndex.GetFromCursor(playerCursor)
 			// Only render entities that match the current camera's index
 			if int(*camIndex) == cam.Index() {

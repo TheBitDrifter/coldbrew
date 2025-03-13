@@ -2,11 +2,12 @@ package coldbrew
 
 import (
 	"errors"
+	"iter"
 	"sync"
-	"sync/atomic"
 
 	"github.com/TheBitDrifter/bark"
 	"github.com/TheBitDrifter/blueprint"
+	blueprintclient "github.com/TheBitDrifter/blueprint/client"
 	"github.com/TheBitDrifter/table"
 	"github.com/TheBitDrifter/warehouse"
 )
@@ -23,10 +24,11 @@ type SceneManager interface {
 	LoadingScenes() []Scene
 	// Cache returns the scene cache
 	Cache() warehouse.Cache[Scene]
-
 	// Scene lifecycle
-	ActiveScenes() []Scene
 
+	ActiveScenes() iter.Seq[Scene]
+	ActiveScene(int) Scene
+	SceneCount() int
 	// RegisterScene creates and registers a new scene with the provided configuration
 	RegisterScene(string, int, int, blueprint.Plan, []RenderSystem, []ClientSystem, []blueprint.CoreSystem) error
 	// ChangeScene transitions to a target scene, transferring specified entities
@@ -42,7 +44,6 @@ type sceneManager struct {
 	activeScenes  []Scene
 	loadingScenes []Scene
 	cache         warehouse.Cache[Scene]
-	cacheBust     atomic.Bool
 }
 
 // newSceneManager creates a scene manager with specified cache size
@@ -52,14 +53,17 @@ func newSceneManager(maxScenesCached int) *sceneManager {
 	}
 }
 
-func (m *sceneManager) ActiveScenes() []Scene {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (m *sceneManager) ActiveScenes() iter.Seq[Scene] {
+	return func(yield func(Scene) bool) {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
 
-	// Create a copy to avoid race conditions on the returned slice
-	result := make([]Scene, len(m.activeScenes))
-	copy(result, m.activeScenes)
-	return result
+		for _, s := range m.activeScenes {
+			if !yield(s) {
+				return
+			}
+		}
+	}
 }
 
 // Scene access methods
@@ -102,10 +106,7 @@ func (m *sceneManager) ActivateScene(target Scene, entities ...warehouse.Entity)
 		}
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, scene := range m.activeScenes {
+	for scene := range m.ActiveScenes() {
 		if scene == target {
 			target.SetSelectedTick()
 			return nil
@@ -120,9 +121,6 @@ func (m *sceneManager) ActivateScene(target Scene, entities ...warehouse.Entity)
 // ChangeScene replaces the current active scene with the target scene
 // Only works when exactly one scene is active
 func (m *sceneManager) ChangeScene(target Scene, entities ...warehouse.Entity) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if len(m.activeScenes) > 1 {
 		return bark.AddTrace(
 			errors.New("cannot use change scene api when multiple scenes are active — use activate scene api instead"),
@@ -146,16 +144,36 @@ func (m *sceneManager) ChangeScene(target Scene, entities ...warehouse.Entity) e
 
 // DeactivateScene removes the target scene from the active scenes list
 func (m *sceneManager) DeactivateScene(target Scene) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for i, scene := range m.activeScenes {
+	i := 0
+	for scene := range m.ActiveScenes() {
 		if scene == target {
 			lastIdx := len(m.activeScenes) - 1
 			m.activeScenes[i] = m.activeScenes[lastIdx]
 			m.activeScenes = m.activeScenes[:lastIdx]
+
+			// When the scene is deactivated it may have its assets cleared for a cache resolution
+			// Thus the atomic indexes are no longer safe
+			// We must fall back on keys
+			cursor := scene.NewCursor(blueprint.Queries.SpriteBundle)
+			for range cursor.Next() {
+				bundle := blueprintclient.Components.SpriteBundle.GetFromCursor(cursor)
+				for i := range bundle.Blueprints {
+					bundle.Blueprints[i].Location.Index.Store(0)
+				}
+			}
+			cursor = scene.NewCursor(blueprint.Queries.SoundBundle)
+			for range cursor.Next() {
+				bundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
+				for i := range bundle.Blueprints {
+					bundle.Blueprints[i].Location.Index.Store(0)
+				}
+			}
+
+			target.SetLoaded(false)
 			break
 		}
+
+		i++
 	}
 }
 
@@ -212,4 +230,24 @@ func (m *sceneManager) newScene(
 		},
 	}
 	return newScene, nil
+}
+
+// ActiveScene returns the scene at the specified index
+func (m *sceneManager) ActiveScene(index int) Scene {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if index < 0 || index >= len(m.activeScenes) {
+		return nil // Or return a zero value, or panic, depending on your error handling strategy
+	}
+
+	return m.activeScenes[index]
+}
+
+// SceneCount returns the total number of active scenes
+func (m *sceneManager) SceneCount() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return len(m.activeScenes)
 }

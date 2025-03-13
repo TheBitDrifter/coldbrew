@@ -15,7 +15,7 @@ func (sys MusicSystem) Run(lc coldbrew.LocalClient, scene coldbrew.Scene) error 
 	cursor := scene.NewCursor(musicQuery)
 
 	// There's only one but iterate nonetheless
-	for cursor.Next() {
+	for range cursor.Next() {
 		soundBundle := blueprintclient.Components.SoundBundle.GetFromCursor(cursor)
 
 		// Get the actual sounds from the bundle

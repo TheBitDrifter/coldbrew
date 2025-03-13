@@ -1,6 +1,8 @@
 package coldbrew
 
 import (
+	"sync/atomic"
+
 	blueprintclient "github.com/TheBitDrifter/blueprint/client"
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -9,33 +11,38 @@ import (
 const MaxSplit = blueprintclient.MaxSplit
 
 // ClientConfig contains default configuration settings for the game client
-var ClientConfig = config{
-	configWrite: configWrite{
-		Title:       "Bappa!",
-		DebugVisual: true,
-	},
-	maxSpritesCached:   2500,
-	maxSoundsCached:    2500,
-	minimumLoadTime:    0,
-	enforceMinOnActive: true,
-	tps:                60,
-	debugKey:           ebiten.Key0,
-	cameraBorderSize:   0,
-	resolution: struct{ x, y int }{
-		x: 640,
-		y: 360,
-	},
-	windowSize: struct{ x, y int }{
-		x: 1920,
-		y: 1080,
-	},
-}
+
+var ClientConfig = func() *config {
+	defConfig := config{
+		configWrite: configWrite{
+			Title:       "Bappa!",
+			DebugVisual: true,
+		},
+		minimumLoadTime:    0,
+		enforceMinOnActive: true,
+		tps:                60,
+		debugKey:           ebiten.Key0,
+		cameraBorderSize:   0,
+		resolution: struct{ x, y int }{
+			x: 640,
+			y: 360,
+		},
+		windowSize: struct{ x, y int }{
+			x: 1920,
+			y: 1080,
+		},
+	}
+
+	defConfig.maxSpritesCached.Store(200)
+	defConfig.maxSoundsCached.Store(200)
+	return &defConfig
+}()
 
 // config holds all configuration parameters for the game client
 type config struct {
 	configWrite
-	maxSpritesCached   int
-	maxSoundsCached    int
+	maxSpritesCached   atomic.Uint32
+	maxSoundsCached    atomic.Uint32
 	minimumLoadTime    int
 	enforceMinOnActive bool
 	tps                int
