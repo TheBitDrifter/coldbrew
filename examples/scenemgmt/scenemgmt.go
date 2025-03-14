@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"log"
 
 	"github.com/TheBitDrifter/blueprint"
@@ -116,15 +115,14 @@ func sceneTwoPlan(height, width int, sto warehouse.Storage) error {
 }
 
 type transfer struct {
-	target       coldbrew.Scene
-	playerEntity warehouse.Entity
+	targetSceneName string
+	playerEntity    warehouse.Entity
 }
 
 type basicTransferSystem struct{}
 
 func (basicTransferSystem) Run(cli coldbrew.Client) error {
 	var pending []transfer
-	sceneCache := cli.Cache()
 
 	for activeScene := range cli.ActiveScenes() {
 		if !activeScene.Ready() {
@@ -148,17 +146,9 @@ func (basicTransferSystem) Run(cli coldbrew.Client) error {
 					sceneTargetName = sceneOneName
 				}
 
-				targetSceneIndex, found := sceneCache.GetIndex(sceneTargetName)
-				if !found {
-					log.Println("Target scene not found:", sceneTargetName)
-					return fmt.Errorf("target scene '%s' not found in cache", sceneTargetName)
-				}
-
-				targetScene := sceneCache.GetItem(targetSceneIndex)
-
 				transfer := transfer{
-					target:       targetScene,
-					playerEntity: currentPlayerEntity,
+					targetSceneName: sceneTargetName,
+					playerEntity:    currentPlayerEntity,
 				}
 				pending = append(pending, transfer)
 			}
@@ -166,7 +156,7 @@ func (basicTransferSystem) Run(cli coldbrew.Client) error {
 	}
 
 	for _, transfer := range pending {
-		cli.ChangeScene(transfer.target, transfer.playerEntity)
+		cli.ChangeSceneByName(transfer.targetSceneName, transfer.playerEntity)
 	}
 
 	return nil
