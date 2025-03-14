@@ -74,7 +74,7 @@ func exampleScenePlan(height, width int, sto warehouse.Storage) error {
 	}
 	for i := 0; i < 10; i++ {
 		err = boxArchetype.Generate(1,
-			blueprintspatial.NewPosition(float64(i*100), 20),
+			blueprintspatial.NewPosition(float64(i*100), float64(20*i)),
 			blueprintmotion.NewDynamics(10),
 			blueprintspatial.NewRectangle(30, 40),
 		)

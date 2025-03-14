@@ -35,7 +35,7 @@ func main() {
 		assets,
 	)
 
-	client.SetTitle("Scene Managment Example")
+	client.SetTitle("Scene Change Example")
 	client.SetMinimumLoadTime(20)
 
 	err := client.RegisterScene(
@@ -157,6 +157,8 @@ func (basicTransferSystem) Run(cli coldbrew.Client) error {
 
 	for _, transfer := range pending {
 		cli.ChangeSceneByName(transfer.targetSceneName, transfer.playerEntity)
+		// Note:
+		// Use cli.ActivateSceneByName() if doing multi scene setups!
 	}
 
 	return nil
