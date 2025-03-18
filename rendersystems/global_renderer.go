@@ -1,7 +1,6 @@
 package rendersystems
 
 import (
-	"image"
 	"log/slog"
 	"math"
 
@@ -339,8 +338,5 @@ func RenderSpriteSheetAnimation(
 
 // GetAnimationFrame extracts a single frame from a sprite sheet based on animation data
 func GetAnimationFrame(sheet coldbrew.Sprite, anim blueprintclient.AnimationData, frameIndex int, logger *slog.Logger) *ebiten.Image {
-	sx := frameIndex * anim.FrameWidth
-	sy := anim.RowIndex * anim.FrameHeight
-	frame := sheet.Image().SubImage(image.Rect(sx, sy, sx+anim.FrameWidth, sy+anim.FrameHeight)).(*ebiten.Image)
-	return frame
+	return sheet.GetFrame(anim.RowIndex, frameIndex, anim.FrameWidth, anim.FrameHeight)
 }
