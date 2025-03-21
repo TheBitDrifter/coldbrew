@@ -15,7 +15,7 @@ import (
 )
 
 // GlobalRenderer is the default render system for the coldbrew package
-// It automatically handles sprites, sprite sheets, and parallax backgrounds
+// It automatically handles sprites, sprite sheets, tiles, and parallax backgrounds
 type GlobalRenderer struct {
 	logger *slog.Logger
 	sorted [][]RenderItem
@@ -126,12 +126,107 @@ func (sys GlobalRenderer) Render(cli coldbrew.Client, screen coldbrew.Screen) {
 				if config.IgnoreDefaultRenderer {
 					continue
 				}
-				RenderEntity(pos.Two, float64(rot), scale.Two, direction, spr, bp, cam, scene.CurrentTick())
+
+				// Check if this is a tileset or a regular sprite
+				if len(bp.TileSet) > 0 {
+					RenderTiles(spr, bp, pos.Two, direction, rot, scale.Two, cam)
+				} else {
+					RenderEntity(pos.Two, float64(rot), scale.Two, direction, spr, bp, cam, scene.CurrentTick())
+				}
 			}
 		}
 		sys.sorted = make([][]RenderItem, len(sys.sorted))
 
 		cam.PresentToScreen(screen, coldbrew.ClientConfig.CameraBorderSize())
+	}
+}
+
+// RenderTiles draws tiles from a tileset
+func RenderTiles(
+	sprite coldbrew.Sprite,
+	blueprint *blueprintclient.SpriteBlueprint,
+	entityPosition vector.Two,
+	direction blueprintspatial.Direction,
+	rotation blueprintspatial.Rotation,
+	scale vector.Two,
+	cam coldbrew.Camera,
+) {
+	// Skip if not active
+	if !blueprint.Config.Active {
+		return
+	}
+
+	// Skip if no tiles
+	if len(blueprint.TileSet) == 0 {
+		return
+	}
+
+	// Get camera viewport for culling
+	width, height := cam.Dimensions()
+	_, cameraPos := cam.Positions()
+	viewportMinX := cameraPos.X - float64(width)/10 // Add small buffer
+	viewportMaxX := cameraPos.X + float64(width) + float64(width)/10
+	viewportMinY := cameraPos.Y - float64(height)/10
+	viewportMaxY := cameraPos.Y + float64(height) + float64(height)/10
+
+	// Find the first tile to determine tile size (assuming all tiles are the same size)
+	// This assumes the sprite is a tileset with uniform tile sizes
+	// We'll use 16 as a fallback if we can't determine
+	tileWidth := 16
+	tileHeight := 16
+
+	// Render each tile
+	for _, tile := range blueprint.TileSet {
+		// Get the tile's world position by adding its relative position to the entity position
+		tilePos := vector.Two{
+			X: entityPosition.X + tile.X,
+			Y: entityPosition.Y + tile.Y,
+		}
+
+		// Skip tiles outside the viewport (basic culling)
+		if tilePos.X+float64(tileWidth) < viewportMinX ||
+			tilePos.X > viewportMaxX ||
+			tilePos.Y+float64(tileHeight) < viewportMinY ||
+			tilePos.Y > viewportMaxY {
+			continue
+		}
+
+		// Get the tile from the sprite
+		tileImg := sprite.GetTile(tile.SourceX, tile.SourceY, tileWidth, tileHeight)
+
+		// Create draw options
+		opts := &ebiten.DrawImageOptions{}
+
+		// Apply offset from blueprint
+		opts.GeoM.Translate(blueprint.Config.Offset.X, blueprint.Config.Offset.Y)
+
+		// Apply tile-specific flipping
+		if tile.FlippedX {
+			opts.GeoM.Scale(-1, 1)
+			opts.GeoM.Translate(float64(tileWidth), 0) // Adjust for flipping
+		}
+
+		if tile.FlippedY {
+			opts.GeoM.Scale(1, -1)
+			opts.GeoM.Translate(0, float64(tileHeight)) // Adjust for flipping
+		}
+
+		// Apply scaling
+		if scale.X != 1 || scale.Y != 1 {
+			opts.GeoM.Scale(scale.X, scale.Y)
+		}
+
+		// Apply rotation
+		if float64(rotation) != 0 {
+			opts.GeoM.Rotate(float64(rotation))
+		}
+
+		// Draw the tile
+		if blueprint.Config.Static {
+			cam.DrawImageStatic(tileImg, opts, tilePos)
+		} else {
+			cam.DrawImage(tileImg, opts, tilePos)
+		}
 	}
 }
 
@@ -221,24 +316,29 @@ func RenderEntityFromCursor(cursor *warehouse.Cursor, cam coldbrew.Camera, curre
 			scale = &scaleV
 		}
 
-		isSpriteSheet := bp.HasAnimations()
-		if isSpriteSheet {
-			RenderSpriteSheetAnimation(
-				sprite,
-				bp,
-				bp.Config.ActiveAnimIndex,
-				pos.Two,
-				float64(*rot),
-				scale.Two,
-				*direction,
-				bp.Config.Offset,
-				bp.Config.Static,
-				cam,
-				currentTick,
-				nil,
-			)
+		// Check if this is a tileset or a regular sprite
+		if len(bp.TileSet) > 0 {
+			RenderTiles(sprite, bp, pos.Two, *direction, *rot, scale.Two, cam)
 		} else {
-			RenderSprite(sprite, pos.Two, float64(*rot), scale.Two, bp.Config.Offset, *direction, bp.Config.Static, cam)
+			isSpriteSheet := bp.HasAnimations()
+			if isSpriteSheet {
+				RenderSpriteSheetAnimation(
+					sprite,
+					bp,
+					bp.Config.ActiveAnimIndex,
+					pos.Two,
+					float64(*rot),
+					scale.Two,
+					*direction,
+					bp.Config.Offset,
+					bp.Config.Static,
+					cam,
+					currentTick,
+					nil,
+				)
+			} else {
+				RenderSprite(sprite, pos.Two, float64(*rot), scale.Two, bp.Config.Offset, *direction, bp.Config.Static, cam)
+			}
 		}
 	}
 }

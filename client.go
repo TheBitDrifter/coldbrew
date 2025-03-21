@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"io/fs"
+	"log"
 	"sync"
 
 	"github.com/TheBitDrifter/blueprint"
@@ -279,6 +280,7 @@ func (cli *client) resolveCacheForActiveScenes() {
 func (cli *client) onCacheResolveComplete(spriteCache warehouse.Cache[Sprite], soundCache warehouse.Cache[Sound], err error) {
 	if err != nil {
 		handler := GetCacheResolveErrorHandler()
+		log.Println(err)
 		handler(err)
 		return
 	}
