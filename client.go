@@ -353,7 +353,7 @@ func (cli *client) Draw(image *ebiten.Image) {
 		}
 	}
 
-	if ClientConfig.DebugVisual {
+	if ClientConfig.DebugVisual && !isProd {
 		stats := fmt.Sprintf("FRAMES: %v\nTICKS: %v", ebiten.ActualFPS(), ebiten.ActualTPS())
 		ebitenutil.DebugPrint(screen.Image(), stats)
 	}
