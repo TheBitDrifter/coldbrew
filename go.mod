@@ -4,11 +4,11 @@ go 1.24.1
 
 require (
 	github.com/TheBitDrifter/bark v0.0.0-20250302175939-26104a815ed9
-	github.com/TheBitDrifter/blueprint v0.0.0-20250321150852-94d8c7ed9d26
+	github.com/TheBitDrifter/blueprint v0.0.2-early-alpha.1
 	github.com/TheBitDrifter/mask v0.0.0-20250302170854-74953aa585aa
 	github.com/TheBitDrifter/table v0.0.0-20250302173100-264081644811
-	github.com/TheBitDrifter/tteokbokki v0.0.0-20250314131133-b229fc86d19a
-	github.com/TheBitDrifter/warehouse v0.0.0-20250314130927-1476ce6b114f
+	github.com/TheBitDrifter/tteokbokki v0.0.2-early-alpha
+	github.com/TheBitDrifter/warehouse v0.0.1-early-alpha.1
 	github.com/hajimehoshi/ebiten/v2 v2.8.6
 	golang.org/x/image v0.25.0
 )
